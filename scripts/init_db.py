@@ -1,5 +1,5 @@
 """
-数据库初始化脚本
+数据库初始化脚本 - 支持SQLite和MySQL
 """
 import sys
 import os
@@ -29,6 +29,7 @@ def init_database():
                 SystemConfig(config_key="ocr_lang", config_value="ch", description="OCR识别语言"),
                 SystemConfig(config_key="ocr_use_gpu", config_value="false", description="是否使用GPU"),
                 SystemConfig(config_key="max_file_size_mb", config_value="10", description="最大文件大小(MB)"),
+                SystemConfig(config_key="ocr_mock_mode", config_value="true", description="OCR模拟模式"),
             ]
             
             for config in default_configs:
@@ -38,6 +39,18 @@ def init_database():
             
             db.commit()
             logger.info("Default configurations created!")
+            
+            # 显示数据库信息
+            from app.database import DATABASE_URL
+            logger.info(f"Database URL: {DATABASE_URL}")
+            
+            # 检查是否为SQLite
+            if DATABASE_URL.startswith('sqlite'):
+                db_file = DATABASE_URL.replace('sqlite:///', '')
+                logger.info(f"SQLite database file: {os.path.abspath(db_file)}")
+                print(f"\n✅ SQLite数据库文件已创建: {os.path.abspath(db_file)}")
+            else:
+                print("\n✅ MySQL数据库表已创建")
             
         finally:
             db.close()

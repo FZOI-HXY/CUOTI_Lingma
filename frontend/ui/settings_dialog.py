@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                              QSpinBox, QComboBox)
 from PyQt6.QtCore import Qt
 
-from ..config.settings import app_settings
+from config.settings import app_settings
 
 
 class SettingsDialog(QDialog):
@@ -59,7 +59,7 @@ class SettingsDialog(QDialog):
     
     def load_settings(self):
         """加载配置"""
-        self.backend_url_input.setText(app_settings.get('backend_url', 'http://localhost:8000'))
+        self.backend_url_input.setText(app_settings.get('backend_url', 'http://localhost:8001'))
         self.api_version_input.setText(app_settings.get('api_version', '/api/v1'))
         self.max_file_size_input.setValue(app_settings.get('max_file_size_mb', 10))
         self.log_level_combo.setCurrentText(app_settings.get('log_level', 'INFO'))

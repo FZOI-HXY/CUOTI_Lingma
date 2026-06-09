@@ -1,7 +1,12 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, Float, Boolean, ForeignKey, Index
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from .database import Base
+
+
+def _now_utc():
+    """返回当前UTC时间（timezone-aware）"""
+    return datetime.now(timezone.utc)
 
 
 class User(Base):
@@ -12,8 +17,8 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False, index=True)
     email = Column(String(100), unique=True, nullable=True)
     password_hash = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_now_utc)
+    updated_at = Column(DateTime, default=_now_utc, onupdate=_now_utc)
     is_active = Column(Boolean, default=True)
 
     # 关系
@@ -41,7 +46,7 @@ class Question(Base):
     ocr_raw_data = Column(JSON, nullable=True)
     
     # 元数据
-    metadata = Column(JSON, nullable=True)  # 存储版面分析结果、置信度等
+    question_metadata = Column(JSON, nullable=True)  # 存储版面分析结果、置信度等(改名避免冲突)
     tags = Column(JSON, nullable=True)  # 标签列表
     subject = Column(String(50), nullable=True)  # 科目
     
@@ -50,8 +55,8 @@ class Question(Base):
     error_message = Column(Text, nullable=True)
     
     # 时间戳
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_now_utc, index=True)
+    updated_at = Column(DateTime, default=_now_utc, onupdate=_now_utc)
     processed_at = Column(DateTime, nullable=True)
 
     # 关系
@@ -85,7 +90,7 @@ class ProcessingLog(Base):
     duration_ms = Column(Float, nullable=True)  # 处理耗时(毫秒)
     
     # 时间戳
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=_now_utc, index=True)
 
     # 关系
     user = relationship("User", back_populates="processing_logs")
@@ -110,8 +115,41 @@ class SystemConfig(Base):
     config_value = Column(Text, nullable=False)
     config_type = Column(String(20), default="string")  # string, int, float, bool, json
     description = Column(String(500), nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=_now_utc, onupdate=_now_utc)
     updated_by = Column(String(50), nullable=True)
 
     def __repr__(self):
         return f"<SystemConfig(key='{self.config_key}')>"
+
+
+class TaskStatus(Base):
+    """
+    任务状态持久化表 —— 替代内存字典，确保重启后任务状态不丢失。
+    用于跟踪异步OCR处理任务的进度和结果。
+    """
+    __tablename__ = "task_status"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(String(64), unique=True, nullable=False, index=True)
+    question_id = Column(Integer, ForeignKey("questions.id"), nullable=True, index=True)
+    
+    # 任务状态
+    status = Column(String(20), default="processing")  # processing, completed, failed
+    progress = Column(Integer, default=0)              # -1 表示失败, 0~100 表示进度百分比
+    message = Column(String(500), default="")
+    error = Column(Text, nullable=True)
+    
+    # 性能指标
+    processing_time_ms = Column(Float, nullable=True)
+    
+    # 时间戳
+    created_at = Column(DateTime, default=_now_utc)
+    updated_at = Column(DateTime, default=_now_utc, onupdate=_now_utc)
+
+    # 索引
+    __table_args__ = (
+        Index('idx_task_status', 'status'),
+    )
+
+    def __repr__(self):
+        return f"<TaskStatus(task_id='{self.task_id}', status='{self.status}', progress={self.progress})>"

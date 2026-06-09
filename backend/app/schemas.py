@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
@@ -38,21 +38,20 @@ class QuestionCreate(BaseModel):
 
 class QuestionResponse(BaseModel):
     """错题响应"""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     user_id: Optional[int]
     original_image_path: str
     processed_image_path: Optional[str]
     masked_image_path: Optional[str]
     ocr_result_md: Optional[str]
-    metadata: Optional[dict]
+    metadata: Optional[dict] = Field(None, alias='question_metadata')
     tags: Optional[List[str]]
     subject: Optional[str]
     status: str
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 
 class QuestionListResponse(BaseModel):

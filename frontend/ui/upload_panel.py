@@ -6,7 +6,7 @@ from PyQt6.QtGui import QPixmap, QImage
 import os
 import time
 
-from ..api.client import api_client
+from api.client import api_client
 
 
 class UploadWorker(QThread):

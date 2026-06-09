@@ -9,7 +9,8 @@ import time
 from .config import settings
 from .core.exceptions import AppException
 from .utils.logger import setup_logger, logger
-from .database import engine, Base
+from .database import engine, Base, get_db_session
+from .models import TaskStatus
 from .routers import upload, ocr, questions, system
 
 
@@ -22,12 +23,30 @@ async def lifespan(app: FastAPI):
     # 启动时执行
     logger.info("Starting Cuoti Management System...")
     
+    # 导入所有模型，确保它们被注册到Base.metadata
+    from . import models  # noqa: F401
+    
     # 创建数据库表
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")
     except Exception as e:
         logger.error(f"Failed to create database tables: {e}")
+    
+    # 恢复中断的任务状态（服务重启后，将processing状态的任务标记为failed）
+    try:
+        with get_db_session() as db:
+            stale_tasks = db.query(TaskStatus).filter(
+                TaskStatus.status == "processing"
+            ).all()
+            for task in stale_tasks:
+                task.status = "failed"
+                task.message = "Task interrupted by server restart"
+                task.error = "Server was restarted while task was processing"
+            if stale_tasks:
+                logger.warning(f"Marked {len(stale_tasks)} stale task(s) as failed after restart")
+    except Exception as e:
+        logger.warning(f"Failed to recover stale tasks (table may not exist yet): {e}")
     
     # 创建必要的目录
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)

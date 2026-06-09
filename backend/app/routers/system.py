@@ -4,16 +4,31 @@ from sqlalchemy import func
 import psutil
 import time
 import os
+from datetime import datetime, timezone
 
 from ..database import get_db
 from ..models import Question, ProcessingLog
 from ..schemas import SystemStatus, LogEntry
 from ..config import settings
+from ..utils.logger import logger
 
 router = APIRouter()
 
 # 应用启动时间
 START_TIME = time.time()
+
+
+def _get_disk_usage_percent() -> float:
+    """跨平台获取系统盘使用率（兼容 Windows 和 Linux）"""
+    try:
+        if os.name == 'nt':
+            # Windows: 使用系统盘符
+            system_drive = os.environ.get('SystemDrive', 'C:') + os.sep
+            return psutil.disk_usage(system_drive).percent
+        else:
+            return psutil.disk_usage('/').percent
+    except Exception:
+        return 0.0
 
 
 @router.get("/status", response_model=SystemStatus)
@@ -25,9 +40,8 @@ async def get_system_status(db: Session = Depends(get_db)):
         memory = psutil.virtual_memory()
         memory_percent = memory.percent
         
-        # 磁盘使用率
-        disk = psutil.disk_usage('/')
-        disk_percent = disk.percent
+        # 磁盘使用率（跨平台兼容）
+        disk_percent = _get_disk_usage_percent()
         
         # 统计错题数量
         total_questions = db.query(func.count(Question.id)).scalar() or 0
@@ -45,6 +59,7 @@ async def get_system_status(db: Session = Depends(get_db)):
         )
         
     except Exception as e:
+        logger.error(f"Failed to get system status: {e}")
         return SystemStatus(
             cpu_percent=0.0,
             memory_percent=0.0,
@@ -97,15 +112,14 @@ async def get_processing_logs(
         }
         
     except Exception as e:
-        return {'error': str(e), 'items': []}
+        logger.error(f"Failed to get processing logs: {e}")
+        return {'error': 'Failed to retrieve logs', 'items': []}
 
 
 @router.get("/stats")
 async def get_statistics(db: Session = Depends(get_db)):
     """获取系统统计数据"""
     try:
-        from sqlalchemy import func
-        
         # 总错题数
         total_questions = db.query(func.count(Question.id)).scalar() or 0
         
@@ -117,9 +131,8 @@ async def get_statistics(db: Session = Depends(get_db)):
         
         status_dict = {status: count for status, count in status_counts}
         
-        # 今日处理数
-        from datetime import datetime, timedelta
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        # 今日处理数（使用 timezone-aware UTC 时间）
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         today_count = db.query(func.count(Question.id)).filter(
             Question.created_at >= today_start
         ).scalar() or 0
@@ -141,7 +154,8 @@ async def get_statistics(db: Session = Depends(get_db)):
         }
         
     except Exception as e:
-        return {'error': str(e)}
+        logger.error(f"Failed to get statistics: {e}")
+        return {'error': 'Failed to retrieve statistics'}
 
 
 def get_directory_size(path: str) -> int:
@@ -159,5 +173,5 @@ def get_directory_size(path: str) -> int:
         
         return total_size
         
-    except:
+    except Exception:
         return 0

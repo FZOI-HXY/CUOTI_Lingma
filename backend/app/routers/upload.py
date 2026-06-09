@@ -1,7 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, BackgroundTasks
 from typing import Optional
 import os
-import shutil
 import time
 
 from ..config import settings
@@ -9,12 +8,11 @@ from ..utils.logger import logger
 from ..utils.validators import (
     generate_unique_filename,
     validate_image_type,
-    get_file_size_mb
+    get_file_size_mb,
+    calculate_file_hash
 )
 from ..core.exceptions import FileUploadError
 from ..schemas import UploadResponse
-from ..database import get_db
-from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -64,13 +62,12 @@ async def upload_image(
             f.write(contents)
         
         # 计算文件哈希
-        from ..utils.validators import calculate_file_hash
         file_hash = calculate_file_hash(file_path)
         
         duration_ms = (time.time() - start_time) * 1000
         
         # 记录日志
-        logger.info(f"File uploaded successfully: {unique_filename}")
+        logger.info(f"File uploaded successfully: {unique_filename} ({duration_ms:.1f}ms)")
         
         return UploadResponse(
             file_id=unique_filename,
@@ -111,6 +108,13 @@ async def upload_batch_images(
                 errors.append({
                     "filename": file.filename,
                     "error": "File too large"
+                })
+                continue
+            
+            if not validate_image_type(file.filename):
+                errors.append({
+                    "filename": file.filename,
+                    "error": "Unsupported file type"
                 })
                 continue
             

@@ -1,6 +1,7 @@
+import os
 import requests
 from typing import Optional, Dict, Any
-from ..config.settings import app_settings
+from config.settings import app_settings
 
 
 class APIClient:
@@ -9,9 +10,7 @@ class APIClient:
     def __init__(self):
         self.base_url = app_settings.base_url
         self.session = requests.Session()
-        self.session.headers.update({
-            'Content-Type': 'application/json'
-        })
+        # 不设置全局Content-Type，让requests根据请求类型自动设置
     
     def upload_image(self, file_path: str) -> Dict[str, Any]:
         """上传图片文件"""
@@ -19,7 +18,8 @@ class APIClient:
         
         try:
             with open(file_path, 'rb') as f:
-                files = {'file': (file_path, f, 'image/jpeg')}
+                # 文件上传时，requests会自动设置正确的Content-Type (multipart/form-data)
+                files = {'file': (os.path.basename(file_path), f, 'image/jpeg')}
                 response = self.session.post(url, files=files)
                 response.raise_for_status()
                 return response.json()
@@ -124,7 +124,7 @@ class APIClient:
     
     def health_check(self) -> bool:
         """健康检查"""
-        url = f"{app_settings.get('backend_url', 'http://localhost:8000')}/health"
+        url = f"{app_settings.get('backend_url', 'http://localhost:8001')}/health"
         
         try:
             response = self.session.get(url, timeout=5)

@@ -20,10 +20,13 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environment
+# Virtual Environment (项目中的虚拟环境目录)
 venv/
+venv312/
+venv_py312/
 env/
 ENV/
+.venv/
 
 # IDE
 .vscode/
@@ -36,17 +39,20 @@ ENV/
 .env
 !.env.example
 
-# Logs
+# Logs (所有日志目录)
 logs/
+backend/logs/
 *.log
 
 # Database
 *.db
 *.sqlite
 
-# Uploads and Processed files
+# Uploads and Processed files (后端实际目录)
 uploads/
 processed/
+backend/uploads/
+backend/processed/
 
 # OS
 .DS_Store

@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget, QVBoxLayout, 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 
-from .ui.main_window import MainWindow
+from ui.main_window import MainWindow
 
 
 def main():

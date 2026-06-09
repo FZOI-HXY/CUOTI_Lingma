@@ -1,7 +1,10 @@
 import time
 import os
 from typing import Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone
+
+# 禁用 MKL-DNN 以避免兼容性问题（必须在导入 paddle 之前设置）
+os.environ['FLAGS_use_mkldnn'] = '0'
 
 from ..config import settings
 from ..utils.logger import logger
@@ -29,24 +32,31 @@ class OCRService:
             
             # 尝试导入PaddleX和PaddleOCR
             try:
-                from paddlex.pipelines import PPStructureV3
                 from paddleocr import PaddleOCR
                 
-                # 初始化ppstructureV3用于版面分析
-                self.ppstructure = PPStructureV3(
-                    use_gpu=settings.OCR_USE_GPU,
-                    lang=settings.OCR_LANG
-                )
-                logger.info("PP-StructureV3 initialized successfully")
+                # 初始化ppOCR用于文字识别 (新版本API)
+                # 确保使用 CPU 并禁用 oneDNN
+                import paddle
+                paddle.set_device('cpu')
                 
-                # 初始化ppOCR用于文字识别
                 self.ppocr = PaddleOCR(
-                    use_angle_cls=True,
                     lang=settings.OCR_LANG,
-                    use_gpu=settings.OCR_USE_GPU,
-                    show_log=False
+                    ocr_version='PP-OCRv5'  # 显式指定 OCR 版本
                 )
                 logger.info("PaddleOCR initialized successfully")
+                
+                # 尝试初始化版面分析 (可选)
+                try:
+                    import paddlex
+                    # PaddleX 3.x 使用 create_pipeline
+                    self.ppstructure = paddlex.create_pipeline(
+                        pipeline='ppstructure_v3',
+                        lang=settings.OCR_LANG
+                    )
+                    logger.info("PP-StructureV3 initialized successfully")
+                except Exception as e:
+                    logger.warning(f"PP-StructureV3 not available: {str(e)}")
+                    self.ppstructure = None
                 
                 self._initialized = True
                 logger.info("All OCR models initialized successfully")
@@ -108,9 +118,9 @@ class OCRService:
             # 计算处理时间
             processing_time_ms = (time.time() - start_time) * 1000
             
-            # 构建元数据
+            # 构建元数据(用于JSON存储)
             metadata = {
-                'processed_at': datetime.utcnow().isoformat(),
+                'processed_at': datetime.now(timezone.utc).isoformat(),  # JSON需要字符串格式
                 'language': settings.OCR_LANG,
                 'image_count': len(image_regions),
                 'processing_time_ms': processing_time_ms,
@@ -144,13 +154,9 @@ class OCRService:
                 result = self.ppstructure(input=image_path)
                 return result
             else:
-                # Mock模式
-                logger.warning("Using mock layout analysis")
-                return {
-                    'results': [
-                        {'type': 'text', 'bbox': [0, 0, 100, 50], 'text': 'Mock text region'}
-                    ]
-                }
+                # 不使用 mock，直接返回空结果
+                logger.info("Layout analysis not available, skipping")
+                return {'results': []}
         except Exception as e:
             logger.error(f"Layout analysis failed: {str(e)}")
             return {'results': []}
@@ -159,7 +165,8 @@ class OCRService:
         """执行OCR文字识别"""
         try:
             if self.ppocr:
-                result = self.ppocr.ocr(image_path, cls=True)
+                # 新版本 PaddleOCR 不支持 cls 参数
+                result = self.ppocr.ocr(image_path)
                 
                 # 转换结果为统一格式
                 if result and result[0]:

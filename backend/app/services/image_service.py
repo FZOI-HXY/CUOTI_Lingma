@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from typing import List, Tuple, Dict
 from pathlib import Path
-from .utils.logger import logger
+from app.utils.logger import logger
 
 
 class ImageService:

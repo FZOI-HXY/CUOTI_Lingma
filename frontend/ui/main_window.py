@@ -1,12 +1,12 @@
 from PyQt6.QtWidgets import (QMainWindow, QTabWidget, QWidget, QVBoxLayout, 
-                             QMessageBox, QToolBar, QAction)
+                             QMessageBox, QToolBar)
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QAction
 
-from .upload_panel import UploadPanel
-from .question_manager import QuestionManager
-from .system_monitor import SystemMonitor
-from .settings_dialog import SettingsDialog
+from ui.upload_panel import UploadPanel
+from ui.question_manager import QuestionManager
+from ui.system_monitor import SystemMonitor
+from ui.settings_dialog import SettingsDialog
 
 
 class MainWindow(QMainWindow):

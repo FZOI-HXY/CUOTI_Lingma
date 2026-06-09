@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QProgressBar,
                              QGroupBox, QHBoxLayout, QTextEdit)
 from PyQt6.QtCore import QTimer
 
-from ..api.client import api_client
+from api.client import api_client
 
 
 class SystemMonitor(QWidget):

@@ -8,15 +8,18 @@ class Settings(BaseSettings):
     
     # 服务器配置
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = 8001  # 已从8000改为8001,避免端口残留问题
     DEBUG: bool = True
     
-    # 数据库配置
-    DB_HOST: str = "localhost"
-    DB_PORT: int = 3306
-    DB_USER: str = "root"
-    DB_PASSWORD: str = "your_password"
-    DB_NAME: str = "cuoti_system"
+    # 数据库配置 - SQLite(默认)
+    DB_FILE: str = "cuoti_system.db"
+    
+    # MySQL配置(如果使用MySQL,取消注释并设置)
+    # DB_HOST: str = "localhost"
+    # DB_PORT: int = 3306
+    # DB_USER: str = "root"
+    # DB_PASSWORD: str = "your_password"
+    # DB_NAME: str = "cuoti_system"
     
     # OCR配置
     OCR_LANG: str = "ch"
@@ -38,7 +41,13 @@ class Settings(BaseSettings):
     
     @property
     def database_url(self) -> str:
-        return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        """获取数据库连接URL"""
+        # SQLite配置
+        if hasattr(self, 'DB_FILE') and self.DB_FILE:
+            return f"sqlite:///{self.DB_FILE}"
+        
+        # MySQL配置(如果使用)
+        # return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
     @property
     def cors_origins_list(self) -> List[str]:

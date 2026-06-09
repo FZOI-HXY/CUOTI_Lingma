@@ -37,7 +37,7 @@ async def create_question(
     except Exception as e:
         db.rollback()
         logger.error(f"Failed to create question: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/", response_model=QuestionListResponse)
@@ -76,7 +76,7 @@ async def list_questions(
         
     except Exception as e:
         logger.error(f"Failed to list questions: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/{question_id}", response_model=QuestionResponse)
@@ -113,7 +113,7 @@ async def delete_question(
     except Exception as e:
         db.rollback()
         logger.error(f"Failed to delete question: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.put("/{question_id}/tags")
@@ -138,4 +138,4 @@ async def update_question_tags(
     except Exception as e:
         db.rollback()
         logger.error(f"Failed to update tags: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

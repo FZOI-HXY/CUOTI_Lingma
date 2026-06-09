@@ -5,16 +5,18 @@ python-multipart>=0.0.6
 pydantic>=2.5.0
 pydantic-settings>=2.1.0
 
-# Database
+# Database - SQLite(默认,无需额外安装)
 sqlalchemy>=2.0.0
-pymysql>=1.1.0
-cryptography>=41.0.0
 alembic>=1.13.0
 
-# OCR and Image Processing (暂时注释,需要Python 3.8-3.11)
-# paddlepaddle==2.6.1
-# paddleocr==2.7.3
-# paddlex==3.0.0rc0
+# 如果使用MySQL,取消下面注释
+# pymysql>=1.1.0
+# cryptography>=41.0.0
+
+# OCR and Image Processing
+paddlepaddle==3.3.1
+paddleocr==3.6.0
+paddlex==3.6.1
 opencv-python>=4.8.0
 pillow>=10.0.0
 numpy>=1.26.0

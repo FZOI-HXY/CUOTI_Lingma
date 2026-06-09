@@ -12,7 +12,7 @@ class AppSettings:
         
         # 默认配置
         self.defaults = {
-            'backend_url': 'http://localhost:8000',
+            'backend_url': 'http://localhost:8001',
             'api_version': '/api/v1',
             'upload_dir': str(Path.home() / "CuotiUploads"),
             'max_file_size_mb': 10,

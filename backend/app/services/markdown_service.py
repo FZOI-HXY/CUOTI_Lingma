@@ -1,5 +1,5 @@
 from typing import Dict, List
-from .utils.logger import logger
+from app.utils.logger import logger
 
 
 class MarkdownService:

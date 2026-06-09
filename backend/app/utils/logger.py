@@ -2,7 +2,7 @@ import logging
 import sys
 from pathlib import Path
 from loguru import logger
-from .config import settings
+from app.config import settings
 
 
 def setup_logger(name: str = None):
