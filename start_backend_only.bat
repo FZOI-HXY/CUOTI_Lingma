@@ -2,7 +2,7 @@
 chcp 65001 >nul 2>&1
 
 echo.
-echo Starting backend service on port 8001...
+echo Starting backend service on port 8100...
 echo.
 
 cd /d "%~dp0backend"

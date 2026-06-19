@@ -96,15 +96,15 @@ if not exist "%PROJECT_ROOT%\cuoti_system.db" (
 
 echo.
 
-REM Step 3: Check port 8001
-echo [3/5] Checking port 8001...
+REM Step 3: Check port 8100
+echo [3/5] Checking port 8100...
 echo.
 
-netstat -ano | findstr ":8001.*LISTENING" >nul 2>&1
+netstat -ano | findstr ":8100.*LISTENING" >nul 2>&1
 if %errorlevel% equ 0 (
-    echo   WARNING: Port 8001 is already in use
+    echo   WARNING: Port 8100 is already in use
     echo.
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8001.*LISTENING"') do (
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8100.*LISTENING"') do (
         echo   Found process PID: %%a
     )
     echo.
@@ -120,7 +120,7 @@ if %errorlevel% equ 0 (
         exit /b 0
     )
 ) else (
-    echo   OK: Port 8000 is available
+    echo   OK: Port 8100 is available
 )
 
 echo.
@@ -133,8 +133,8 @@ cd /d "%BACKEND_DIR%"
 start "Backend Service" cmd /k "cd /d %BACKEND_DIR% && %VENV_PYTHON% -m app.main"
 
 echo   Backend starting...
-echo   API Docs: http://localhost:8001/docs
-echo   Health Check: http://localhost:8001/health
+echo   API Docs: http://localhost:8100/docs
+echo   Health Check: http://localhost:8100/health
 echo.
 
 REM Wait for backend to start
@@ -144,7 +144,7 @@ timeout /t 3 /nobreak >nul
 REM Health check
 echo   | set /p dummy="   Checking service status..."
 for /l %%i in (1,1,5) do (
-    curl -s http://localhost:8001/health >nul 2>&1
+    curl -s http://localhost:8100/health >nul 2>&1
     if !errorlevel! equ 0 (
         echo OK: Backend service ready!
         goto backend_ready
@@ -172,9 +172,9 @@ echo ============================================================
 echo   Startup Complete!
 echo ============================================================
 echo.
-echo   Backend API: http://localhost:8001
-echo   API Documentation: http://localhost:8001/docs
-echo   Health Check: http://localhost:8001/health
+echo   Backend API: http://localhost:8100
+echo   API Documentation: http://localhost:8100/docs
+echo   Health Check: http://localhost:8100/health
 echo.
 echo   To stop services:
 echo     - Close the console windows, OR

@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     
     # 服务器配置
     HOST: str = "0.0.0.0"
-    PORT: int = 8001  # 已从8000改为8001,避免端口残留问题
+    PORT: int = 8100
     DEBUG: bool = True
     
     # 数据库配置 - SQLite(默认)
@@ -27,6 +27,33 @@ class Settings(BaseSettings):
     OCR_DET_THRESH: float = 0.5
     OCR_REC_THRESH: float = 0.8
     
+    # ── PaddleOCR-VL-1.6 增强模式配置 ──
+    VL_ENABLED: bool = False                       # 是否启用 VL 增强模式
+    VL_SERVER_PORT: int = 8101                     # llama-server 监听端口
+    VL_SERVER_HOST: str = "0.0.0.0"                # llama-server 监听地址
+    VL_CTX_SIZE: int = 4096                        # 上下文窗口大小
+    VL_THREADS: int = 0                            # 推理线程数 (0=自动)
+    VL_STARTUP_TIMEOUT: int = 120                  # llama-server 启动超时(秒)
+    # 模型和工具路径（默认指向项目结构内的位置）
+    VL_MODEL_DIR: str = r"E:\Program Files\PP_Models\official_models\PaddlePaddle\PaddleOCR-VL-1___6-GGUF"
+    VL_LLAMA_CPP_DIR: str = ""                     # 留空 → 运行时自动推断
+    
+    @property
+    def VL_MODEL_PATH(self) -> str:
+        return os.path.join(self.VL_MODEL_DIR, "PaddleOCR-VL-1.6-GGUF.gguf")
+    
+    @property
+    def VL_MMPROJ_PATH(self) -> str:
+        return os.path.join(self.VL_MODEL_DIR, "PaddleOCR-VL-1.6-GGUF-mmproj.gguf")
+    
+    @property
+    def VL_LLAMA_SERVER_PATH(self) -> str:
+        if self.VL_LLAMA_CPP_DIR:
+            return os.path.join(self.VL_LLAMA_CPP_DIR, "llama-server.exe")
+        # 自动推断：项目根目录/tools/llama-cpp/llama-server.exe
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        return os.path.join(project_root, "tools", "llama-cpp", "llama-server.exe")
+    
     # 文件存储
     UPLOAD_DIR: str = "./uploads"
     PROCESSED_DIR: str = "./processed"
@@ -37,7 +64,7 @@ class Settings(BaseSettings):
     LOG_DIR: str = "./logs"
     
     # CORS配置
-    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,tauri://localhost,http://tauri.localhost,http://localhost:1420,http://localhost:5173"
     
     @property
     def database_url(self) -> str:

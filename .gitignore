@@ -58,6 +58,23 @@ backend/processed/
 .DS_Store
 Thumbs.db
 
+# External tools / binaries (llama-cpp etc., ~61MB)
+tools/
+
+# Build & installer output
+output/
+installer_output/
+
+# Test images
+test_images/
+
+# Inno Setup installer binary (download separately)
+innosetup6.exe
+
+# Tauri / APP dependencies & build artifacts
+APP/node_modules/
+APP/src-tauri/target/
+
 # PyQt6
 *.ui
 *.qrc
