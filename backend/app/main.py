@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
@@ -11,7 +12,7 @@ from .core.exceptions import AppException
 from .utils.logger import setup_logger, logger
 from .database import engine, Base, get_db_session
 from .models import TaskStatus
-from .routers import upload, ocr, questions, system
+from .routers import upload, ocr, questions, system, reports
 
 
 logger = setup_logger(__name__)
@@ -54,10 +55,29 @@ async def lifespan(app: FastAPI):
     os.makedirs(settings.LOG_DIR, exist_ok=True)
     logger.info("Required directories created")
     
+    # 初始化 VL 增强模式（如果启用）
+    if settings.VL_ENABLED:
+        try:
+            from .services.vl_service import vl_service
+            vl_service.initialize()
+            if vl_service.is_available:
+                logger.info("VL enhancement mode: READY")
+            else:
+                logger.warning("VL enhancement mode: configured but not available")
+        except Exception as e:
+            logger.warning(f"VL enhancement mode init failed: {e}")
+    
     yield
     
     # 关闭时执行
     logger.info("Shutting down Cuoti Management System...")
+    
+    # 关闭 VL 服务
+    try:
+        from .services.vl_service import vl_service
+        vl_service.shutdown()
+    except Exception:
+        pass
 
 
 # 创建FastAPI应用
@@ -68,10 +88,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# 配置CORS
+# 配置CORS — 使用通配符以支持 Tauri WebView2 的各种来源格式
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -102,6 +122,13 @@ app.include_router(upload.router, prefix="/api/v1/upload", tags=["文件上传"]
 app.include_router(ocr.router, prefix="/api/v1/ocr", tags=["OCR处理"])
 app.include_router(questions.router, prefix="/api/v1/questions", tags=["错题管理"])
 app.include_router(system.router, prefix="/api/v1/system", tags=["系统监控"])
+app.include_router(reports.router, prefix="/api/v1/reports", tags=["报告下载"])
+
+# 挂载静态文件目录（用于客户端访问上传和处理的图片）
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+os.makedirs(settings.PROCESSED_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+app.mount("/processed", StaticFiles(directory=settings.PROCESSED_DIR), name="processed")
 
 
 # 健康检查接口

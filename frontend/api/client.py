@@ -122,9 +122,68 @@ class APIClient:
         except requests.exceptions.RequestException as e:
             raise Exception(f"Failed to get statistics: {str(e)}")
     
+    # ─────────────────────────────────────────
+    # 报告下载
+    # ─────────────────────────────────────────
+
+    def download_markdown(self, question_id: int, save_path: str) -> str:
+        """下载单题 Markdown 报告，返回保存路径"""
+        url = f"{self.base_url}/reports/{question_id}/markdown"
+        try:
+            response = self.session.get(url, stream=True)
+            response.raise_for_status()
+            with open(save_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            return save_path
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Markdown 下载失败: {str(e)}")
+
+    def download_pdf(self, question_id: int, save_path: str) -> str:
+        """下载单题 PDF 报告，返回保存路径"""
+        url = f"{self.base_url}/reports/{question_id}/pdf"
+        try:
+            response = self.session.get(url, stream=True)
+            response.raise_for_status()
+            with open(save_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            return save_path
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"PDF 下载失败: {str(e)}")
+
+    def download_batch_zip(
+        self,
+        question_ids: list,
+        formats: list = None,
+        save_path: str = None
+    ) -> str:
+        """批量导出报告 ZIP 包，返回保存路径"""
+        url = f"{self.base_url}/reports/batch"
+        if formats is None:
+            formats = ['markdown', 'pdf']
+        try:
+            payload = {
+                'question_ids': question_ids,
+                'formats': formats,
+            }
+            response = self.session.post(
+                url,
+                json=payload,
+                stream=True,
+                timeout=300
+            )
+            response.raise_for_status()
+            with open(save_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            return save_path
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"批量导出失败: {str(e)}")
+
     def health_check(self) -> bool:
         """健康检查"""
-        url = f"{app_settings.get('backend_url', 'http://localhost:8001')}/health"
+        url = f"{app_settings.get('backend_url', 'http://localhost:8100')}/health"
         
         try:
             response = self.session.get(url, timeout=5)
