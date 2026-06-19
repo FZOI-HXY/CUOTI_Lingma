@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>错题管理系统</title>
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 顶部导航栏 -->
+    <header class="app-header">
+      <div class="header-left">
+        <h1 class="app-title">错题管理系统</h1>
+        <span id="server-status" class="status-badge status-disconnected">未连接</span>
+      </div>
+      <div class="header-right">
+        <button id="btn-settings" class="icon-btn" title="设置">⚙</button>
+      </div>
+    </header>
+
+    <!-- 主内容区域 -->
+    <main class="app-main">
+      <!-- 侧边栏 -->
+      <aside class="sidebar">
+        <nav class="nav-menu">
+          <a class="nav-item active" data-page="upload">
+            <span class="nav-icon">📤</span>
+            <span>上传识别</span>
+          </a>
+          <a class="nav-item" data-page="questions">
+            <span class="nav-icon">📚</span>
+            <span>错题本</span>
+          </a>
+          <a class="nav-item" data-page="stats">
+            <span class="nav-icon">📊</span>
+            <span>数据统计</span>
+          </a>
+        </nav>
+      </aside>
+
+      <!-- 页面内容 -->
+      <section class="content">
+        <!-- 上传页面 -->
+        <div id="page-upload" class="page active">
+          <div class="upload-area" id="drop-zone">
+            <div class="upload-icon">📷</div>
+            <p class="upload-title">拖拽图片到此处上传</p>
+            <p class="upload-hint">或点击选择文件 · 支持 JPG / PNG / BMP / WEBP</p>
+            <input type="file" id="file-input" accept="image/*" multiple hidden>
+          </div>
+
+          <!-- 上传预览 -->
+          <div id="upload-preview" class="upload-preview" style="display:none;">
+            <div class="preview-header">
+              <h3>待处理文件</h3>
+              <div class="preview-actions">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="chk-use-vl" checked>
+                  <span>使用 VL 增强识别</span>
+                </label>
+                <button id="btn-start-ocr" class="btn btn-primary">开始识别</button>
+                <button id="btn-clear-files" class="btn btn-secondary">清空</button>
+              </div>
+            </div>
+            <div id="file-list" class="file-list"></div>
+          </div>
+
+          <!-- 处理进度 -->
+          <div id="processing-area" style="display:none;">
+            <div class="processing-card">
+              <div class="spinner"></div>
+              <p id="processing-text">正在识别中，请稍候...</p>
+              <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 识别结果 -->
+          <div id="result-area" style="display:none;">
+            <div class="result-header">
+              <h3>识别结果</h3>
+              <div class="result-actions">
+                <button id="btn-save-question" class="btn btn-primary">保存到错题本</button>
+                <button id="btn-download-md" class="btn btn-secondary">下载 Markdown</button>
+                <button id="btn-new-upload" class="btn btn-secondary">重新上传</button>
+              </div>
+            </div>
+            <div class="result-content">
+              <div class="result-preview">
+                <img id="result-image" src="" alt="原图">
+              </div>
+              <div class="result-markdown">
+                <div id="result-md-content" class="md-content"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 错题本页面 -->
+        <div id="page-questions" class="page">
+          <div class="page-header">
+            <h2>错题本</h2>
+            <div class="page-actions">
+              <select id="filter-status" class="select-input">
+                <option value="">全部状态</option>
+                <option value="completed">已完成</option>
+                <option value="processing">处理中</option>
+                <option value="pending">待处理</option>
+                <option value="failed">失败</option>
+              </select>
+              <button id="btn-batch-export" class="btn btn-secondary">批量导出</button>
+            </div>
+          </div>
+
+          <div id="questions-list" class="questions-list">
+            <div class="empty-state">
+              <p>暂无错题记录</p>
+            </div>
+          </div>
+
+          <div id="questions-pagination" class="pagination"></div>
+        </div>
+
+        <!-- 统计页面 -->
+        <div id="page-stats" class="page">
+          <div class="page-header">
+            <h2>数据统计</h2>
+            <button id="btn-refresh-stats" class="btn btn-secondary">刷新</button>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number" id="stat-total">-</div>
+              <div class="stat-label">总题数</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" id="stat-today">-</div>
+              <div class="stat-label">今日处理</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" id="stat-completed">-</div>
+              <div class="stat-label">已完成</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" id="stat-failed">-</div>
+              <div class="stat-label">失败</div>
+            </div>
+          </div>
+
+          <div class="system-info">
+            <h3>系统状态</h3>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">CPU 使用率</span>
+                <span class="info-value" id="sys-cpu">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">内存使用率</span>
+                <span class="info-value" id="sys-memory">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">磁盘使用率</span>
+                <span class="info-value" id="sys-disk">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">运行时间</span>
+                <span class="info-value" id="sys-uptime">-</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="system-info">
+            <h3>VL 增强模式</h3>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">状态</span>
+                <span class="info-value" id="vl-status">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">服务地址</span>
+                <span class="info-value" id="vl-url">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 设置弹窗 -->
+    <div id="settings-modal" class="modal" style="display:none;">
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>设置</h3>
+          <button class="modal-close" id="btn-close-settings">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>服务器地址</label>
+            <input type="text" id="input-server-url" class="form-input" placeholder="http://localhost:8100">
+          </div>
+          <div class="form-group">
+            <label>默认启用 VL 增强</label>
+            <label class="switch">
+              <input type="checkbox" id="input-default-vl" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-save-settings" class="btn btn-primary">保存</button>
+          <button id="btn-cancel-settings" class="btn btn-secondary">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 题目详情弹窗 -->
+    <div id="detail-modal" class="modal" style="display:none;">
+      <div class="modal-overlay"></div>
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>题目详情</h3>
+          <button class="modal-close" id="btn-close-detail">&times;</button>
+        </div>
+        <div class="modal-body detail-body">
+          <div class="detail-image">
+            <img id="detail-img" src="" alt="题目图片">
+          </div>
+          <div class="detail-content">
+            <div class="detail-meta">
+              <span id="detail-id"></span>
+              <span id="detail-status" class="status-badge"></span>
+              <span id="detail-date"></span>
+            </div>
+            <div id="detail-tags" class="detail-tags"></div>
+            <div id="detail-md" class="md-content"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-detail-export-md" class="btn btn-secondary">导出 Markdown</button>
+          <button id="btn-detail-export-pdf" class="btn btn-secondary">导出 PDF</button>
+          <button id="btn-detail-delete" class="btn btn-danger">删除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="src/main.js"></script>
+</body>
+</html>
