@@ -13,6 +13,23 @@ class UploadResponse(BaseModel):
     message: str = "File uploaded successfully"
 
 
+class PDFPageTask(BaseModel):
+    """PDF 单页任务信息"""
+    page_number: int
+    task_id: str
+    question_id: int
+    page_image_id: str
+
+
+class PDFUploadResponse(BaseModel):
+    """PDF 上传响应"""
+    file_id: str
+    filename: str
+    total_pages: int
+    pages: List[PDFPageTask]
+    message: str = "PDF uploaded and processing started"
+
+
 class OCRProcessRequest(BaseModel):
     """OCR处理请求"""
     file_id: str

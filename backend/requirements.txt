@@ -31,6 +31,9 @@ requests>=2.31.0
 # PDF generation
 fpdf2>=2.7.0
 
+# PDF parsing and page-to-image rendering
+PyMuPDF>=1.24.0
+
 # Markdown to HTML conversion
 markdown>=3.5.0
 

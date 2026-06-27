@@ -39,6 +39,24 @@ def validate_image_type(filename: str, allowed_types: list = None) -> bool:
     return ext in allowed_types
 
 
+def validate_pdf_type(filename: str) -> bool:
+    """验证文件扩展名是否为 PDF"""
+    ext = os.path.splitext(filename)[1].lower()
+    return ext == ".pdf"
+
+
+def validate_pdf_magic_bytes(content: bytes) -> bool:
+    """验证 PDF 文件 magic bytes（%PDF-）"""
+    if len(content) < 5:
+        return False
+    return content[:5] == b'%PDF-'
+
+
+def is_pdf_file(filename: str) -> bool:
+    """判断文件是否为 PDF（仅基于扩展名）"""
+    return validate_pdf_type(filename)
+
+
 def get_file_size_mb(file_path: str) -> float:
     """获取文件大小(MB)"""
     size_bytes = os.path.getsize(file_path)

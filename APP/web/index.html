@@ -46,9 +46,9 @@
         <div id="page-upload" class="page active">
           <div class="upload-area" id="drop-zone">
             <div class="upload-icon">📷</div>
-            <p class="upload-title">拖拽图片到此处上传</p>
-            <p class="upload-hint">或点击选择文件 · 支持 JPG / PNG / BMP / WEBP</p>
-            <input type="file" id="file-input" accept="image/*" multiple hidden>
+            <p class="upload-title">拖拽文件或图片到此处上传</p>
+            <p class="upload-hint">或点击选择文件 · 支持 JPG / PNG / BMP / WEBP / PDF</p>
+            <input type="file" id="file-input" accept="image/*,application/pdf" multiple hidden>
           </div>
 
           <!-- 上传预览 -->
@@ -76,6 +76,17 @@
                 <div id="progress-fill" class="progress-fill"></div>
               </div>
             </div>
+          </div>
+
+          <!-- PDF 多页结果 -->
+          <div id="pdf-results-area" style="display:none;">
+            <div class="pdf-results-header">
+              <h3>PDF 识别结果 (<span id="pdf-page-count">0</span> 页)</h3>
+              <div class="result-actions">
+                <button id="btn-pdf-new-upload" class="btn btn-secondary">重新上传</button>
+              </div>
+            </div>
+            <div id="pdf-pages-list" class="pdf-pages-list"></div>
           </div>
 
           <!-- 识别结果 -->

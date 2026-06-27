@@ -268,6 +268,7 @@ const App = {
     document.getElementById('btn-download-md').addEventListener('click', () => this.downloadMarkdown());
     document.getElementById('btn-download-zip').addEventListener('click', () => this.downloadZip());
     document.getElementById('btn-new-upload').addEventListener('click', () => this.resetUpload());
+    document.getElementById('btn-pdf-new-upload').addEventListener('click', () => this.resetUpload());
 
     // 错题本
     document.getElementById('filter-status').addEventListener('change', () => {
@@ -328,14 +329,17 @@ const App = {
   // ========================
 
   handleFiles(fileList) {
-    const allowed = ['image/jpeg', 'image/png', 'image/bmp', 'image/tiff', 'image/webp'];
+    const allowed = ['image/jpeg', 'image/png', 'image/bmp', 'image/tiff', 'image/webp', 'application/pdf'];
     for (const file of fileList) {
       if (!allowed.includes(file.type)) {
         this.toast(`不支持的文件格式: ${file.name}`, 'error');
         continue;
       }
-      if (file.size > 10 * 1024 * 1024) {
-        this.toast(`文件过大: ${file.name}`, 'error');
+      // PDF 文件允许 50MB，图片 10MB
+      const maxSize = file.type === 'application/pdf' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        const limitMB = maxSize / (1024 * 1024);
+        this.toast(`文件过大: ${file.name} (限制 ${limitMB}MB)`, 'error');
         continue;
       }
       this.selectedFiles.push(file);
@@ -362,14 +366,22 @@ const App = {
       const item = document.createElement('div');
       item.className = 'file-item';
 
-      const thumbUrl = URL.createObjectURL(file);
-      this._blobUrls.push(thumbUrl);  // 跟踪以便释放
+      const isPdf = file.type === 'application/pdf';
+      let thumbHtml;
+      if (isPdf) {
+        thumbHtml = `<div class="file-thumb file-thumb-pdf">PDF</div>`;
+      } else {
+        const thumbUrl = URL.createObjectURL(file);
+        this._blobUrls.push(thumbUrl);  // 跟踪以便释放
+        thumbHtml = `<img class="file-thumb" src="${thumbUrl}" alt="">`;
+      }
+
       item.innerHTML = `
         <div class="file-info">
-          <img class="file-thumb" src="${thumbUrl}" alt="">
+          ${thumbHtml}
           <div>
             <div class="file-name">${this.escapeHtml(file.name)}</div>
-            <div class="file-size">${this.formatSize(file.size)}</div>
+            <div class="file-size">${this.formatSize(file.size)}${isPdf ? ' · PDF' : ''}</div>
           </div>
         </div>
         <button class="file-remove" data-index="${index}">&times;</button>
@@ -397,6 +409,7 @@ const App = {
     this.currentTaskId = null;
     this.currentQuestionId = null;
     document.getElementById('result-area').style.display = 'none';
+    document.getElementById('pdf-results-area').style.display = 'none';
     document.getElementById('processing-area').style.display = 'none';
     document.getElementById('upload-preview').style.display = 'none';
     document.getElementById('drop-zone').style.display = 'block';
@@ -410,51 +423,71 @@ const App = {
     if (this.selectedFiles.length === 0) return;
 
     const useVl = document.getElementById('chk-use-vl').checked;
+    const file = this.selectedFiles[0];
+    const isPdf = file.type === 'application/pdf';
 
     // 隐藏上传区域，显示处理中
     document.getElementById('drop-zone').style.display = 'none';
     document.getElementById('upload-preview').style.display = 'none';
     document.getElementById('result-area').style.display = 'none';
+    document.getElementById('pdf-results-area').style.display = 'none';
     document.getElementById('processing-area').style.display = 'block';
 
     const progressFill = document.getElementById('progress-fill');
     const processingText = document.getElementById('processing-text');
     progressFill.style.width = '0%';
-    processingText.textContent = '正在上传图片...';
 
     try {
-      // 上传第一个文件（简化为单文件处理）
-      const file = this.selectedFiles[0];
       const formData = new FormData();
       formData.append('file', file);
 
-      processingText.textContent = '正在上传图片...';
-      progressFill.style.width = '10%';
+      if (isPdf) {
+        // ── PDF 上传流程 ──
+        processingText.textContent = '正在上传 PDF 并渲染页面...';
+        progressFill.style.width = '10%';
 
-      const uploadResp = await this.fetchApi('/api/v1/upload/image', {
-        method: 'POST',
-        body: formData
-      });
-      const uploadData = await uploadResp.json();
-      const fileId = uploadData.file_id;
+        const uploadResp = await this.fetchApi(
+          `/api/v1/upload/pdf?use_vl=${useVl}`,
+          { method: 'POST', body: formData }
+        );
+        const pdfData = await uploadResp.json();
 
-      // 启动 OCR
-      processingText.textContent = '正在识别中，请稍候...';
-      progressFill.style.width = '30%';
+        this.toast(`PDF 已上传: ${pdfData.total_pages} 页正在处理`, 'success');
+        progressFill.style.width = '100%';
+        processingText.textContent = 'PDF 页面正在 OCR 识别中...';
 
-      const ocrResp = await this.fetchApi('/api/v1/ocr/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          file_id: fileId,
-          use_vl: useVl
-        })
-      });
-      const ocrData = await ocrResp.json();
-      this.currentTaskId = ocrData.task_id;
+        // 开始轮询所有页面任务
+        this.pollPdfTasks(pdfData.pages, pdfData.filename);
+      } else {
+        // ── 图片上传流程（原有逻辑） ──
+        processingText.textContent = '正在上传图片...';
+        progressFill.style.width = '10%';
 
-      // 轮询状态
-      this.pollTaskStatus(file);
+        const uploadResp = await this.fetchApi('/api/v1/upload/image', {
+          method: 'POST',
+          body: formData
+        });
+        const uploadData = await uploadResp.json();
+        const fileId = uploadData.file_id;
+
+        // 启动 OCR
+        processingText.textContent = '正在识别中，请稍候...';
+        progressFill.style.width = '30%';
+
+        const ocrResp = await this.fetchApi('/api/v1/ocr/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            file_id: fileId,
+            use_vl: useVl
+          })
+        });
+        const ocrData = await ocrResp.json();
+        this.currentTaskId = ocrData.task_id;
+
+        // 轮询状态
+        this.pollTaskStatus(file);
+      }
 
     } catch (error) {
       this.toast(`处理失败: ${error.message}`, 'error');
@@ -522,6 +555,147 @@ const App = {
         }
       }
     }, 2000);
+  },
+
+  // ========================
+  // PDF 多页任务轮询
+  // ========================
+
+  pollPdfTasks(pages, pdfFilename) {
+    // pages: [{page_number, task_id, question_id, page_image_id}, ...]
+    const pageStates = pages.map(p => ({
+      ...p,
+      status: 'processing',
+      progress: 0,
+      question: null
+    }));
+
+    const progressFill = document.getElementById('progress-fill');
+    const processingText = document.getElementById('processing-text');
+    let pollCount = 0;
+    const maxPolls = 300; // PDF 多页给更长的超时: 10 分钟
+
+    if (this.pollingTimer) clearInterval(this.pollingTimer);
+
+    this.pollingTimer = setInterval(async () => {
+      pollCount++;
+      if (pollCount > maxPolls) {
+        clearInterval(this.pollingTimer);
+        this.pollingTimer = null;
+        this.toast('PDF 处理超时', 'error');
+        this.resetUpload();
+        return;
+      }
+
+      let completedCount = 0;
+      let failedCount = 0;
+
+      // 轮询每个尚未完成的任务
+      for (const page of pageStates) {
+        if (page.status === 'completed' || page.status === 'failed') continue;
+
+        try {
+          const resp = await this.fetchApi(`/api/v1/ocr/status/${page.task_id}`);
+          const data = await resp.json();
+          page.status = data.status;
+          page.progress = data.progress || 0;
+
+          if (data.status === 'completed' && data.question_id) {
+            // 获取该页的 question 详情
+            try {
+              const qResp = await this.fetchApi(`/api/v1/questions/${data.question_id}`);
+              page.question = await qResp.json();
+            } catch (e) {
+              console.warn(`[pollPdfTasks] 获取 question ${data.question_id} 失败: ${e.message}`);
+            }
+          }
+        } catch (e) {
+          console.warn(`[pollPdfTasks] 轮询 page ${page.page_number} 失败: ${e.message}`);
+        }
+
+        if (page.status === 'completed') completedCount++;
+        if (page.status === 'failed') failedCount++;
+      }
+
+      // 更新总进度
+      const total = pageStates.length;
+      const avgProgress = pageStates.reduce((sum, p) => {
+        if (p.status === 'completed') return sum + 100;
+        if (p.status === 'failed') return sum;
+        return sum + (p.progress || 0);
+      }, 0) / total;
+
+      progressFill.style.width = `${avgProgress}%`;
+      processingText.textContent = `PDF 识别中: ${completedCount}/${total} 页完成` +
+        (failedCount > 0 ? ` (${failedCount} 页失败)` : '');
+
+      // 所有任务完成或失败
+      if (completedCount + failedCount === total) {
+        clearInterval(this.pollingTimer);
+        this.pollingTimer = null;
+        this.showPdfResults(pageStates, pdfFilename);
+      }
+    }, 2000);
+  },
+
+  showPdfResults(pageStates, pdfFilename) {
+    document.getElementById('processing-area').style.display = 'none';
+    document.getElementById('pdf-results-area').style.display = 'block';
+    document.getElementById('pdf-page-count').textContent = pageStates.length;
+
+    const container = document.getElementById('pdf-pages-list');
+    container.innerHTML = '';
+
+    const completedPages = pageStates.filter(p => p.status === 'completed' && p.question);
+    const failedPages = pageStates.filter(p => p.status === 'failed');
+
+    if (completedPages.length > 0) {
+      this.toast(`PDF 识别完成: ${completedPages.length} 页成功` +
+        (failedPages.length > 0 ? `, ${failedPages.length} 页失败` : ''), 'success');
+    }
+
+    for (const page of pageStates) {
+      const card = document.createElement('div');
+      card.className = `pdf-page-card ${page.status}`;
+
+      if (page.status === 'completed' && page.question) {
+        const q = page.question;
+        const imgUrl = this.imageUrl(q.original_image_path);
+        card.innerHTML = `
+          <div class="pdf-page-header">
+            <span class="pdf-page-num">第 ${page.page_number} 页</span>
+            <span class="pdf-page-status status-completed">已完成</span>
+          </div>
+          <div class="pdf-page-body">
+            <div class="pdf-page-preview">
+              <img src="${imgUrl}" alt="第 ${page.page_number} 页" loading="lazy">
+            </div>
+            <div class="pdf-page-md">
+              <div class="md-content">${this.renderMarkdown(q.ocr_result_md)}</div>
+            </div>
+          </div>
+        `;
+      } else if (page.status === 'failed') {
+        card.innerHTML = `
+          <div class="pdf-page-header">
+            <span class="pdf-page-num">第 ${page.page_number} 页</span>
+            <span class="pdf-page-status status-failed">失败</span>
+          </div>
+          <div class="pdf-page-body">
+            <p class="pdf-page-error">识别失败，请重试</p>
+          </div>
+        `;
+      } else {
+        card.innerHTML = `
+          <div class="pdf-page-header">
+            <span class="pdf-page-num">第 ${page.page_number} 页</span>
+            <span class="pdf-page-status status-unknown">未知</span>
+          </div>
+        `;
+      }
+
+      container.appendChild(card);
+    }
   },
 
   async showResult(questionId, originalFile) {

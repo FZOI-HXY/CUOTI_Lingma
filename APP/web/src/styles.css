@@ -880,3 +880,140 @@ body {
   font-size: 14px;
   color: var(--gray-700);
 }
+
+/* ========================
+   PDF 文件处理样式
+   ======================== */
+
+/* PDF 缩略图占位 */
+.file-thumb-pdf {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  background: var(--red-500, #ef4444);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* PDF 多页结果区域 */
+#pdf-results-area {
+  padding: 0 24px 24px;
+}
+
+.pdf-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.pdf-results-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+/* PDF 页面列表 */
+.pdf-pages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 单个页面卡片 */
+.pdf-page-card {
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--white, #fff);
+}
+
+.pdf-page-card.completed {
+  border-color: var(--green-200, #bbf7d0);
+}
+
+.pdf-page-card.failed {
+  border-color: var(--red-200, #fecaca);
+  background: var(--red-50, #fef2f2);
+}
+
+/* 页面头部 */
+.pdf-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.pdf-page-num {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.pdf-page-status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.pdf-page-status.status-completed {
+  background: var(--green-100, #dcfce7);
+  color: var(--green-700, #15803d);
+}
+
+.pdf-page-status.status-failed {
+  background: var(--red-100, #fee2e2);
+  color: var(--red-700, #b91c1c);
+}
+
+.pdf-page-status.status-unknown {
+  background: var(--gray-100);
+  color: var(--gray-500);
+}
+
+/* 页面主体 */
+.pdf-page-body {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 12px;
+  padding: 12px;
+}
+
+.pdf-page-preview img {
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid var(--gray-200);
+  object-fit: cover;
+  max-height: 240px;
+}
+
+.pdf-page-md {
+  overflow: auto;
+  max-height: 240px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.pdf-page-error {
+  color: var(--red-600, #dc2626);
+  font-size: 13px;
+  padding: 20px;
+  text-align: center;
+  grid-column: 1 / -1;
+}
+
+/* 响应式: 窄屏时改为单列 */
+@media (max-width: 640px) {
+  .pdf-page-body {
+    grid-template-columns: 1fr;
+  }
+}

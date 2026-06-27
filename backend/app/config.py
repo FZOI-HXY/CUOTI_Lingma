@@ -81,6 +81,11 @@ class Settings(BaseSettings):
     STORAGE_DIR: str = "./storage"   # 归档存储目录（按题目ID组织）
     MAX_FILE_SIZE: int = 10485760  # 10MB
 
+    # PDF 处理配置
+    PDF_DPI: int = 200                      # PDF 页面渲染 DPI（越高越清晰，越慢）
+    PDF_MAX_PAGES: int = 30                 # 单个 PDF 最大处理页数
+    PDF_MAX_FILE_SIZE: int = 52428800       # PDF 文件最大 50MB
+
     # 日志配置
     LOG_LEVEL: str = "INFO"
     LOG_DIR: str = "./logs"

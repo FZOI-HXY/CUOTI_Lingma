@@ -12,7 +12,7 @@ from .core.exceptions import AppException
 from .utils.logger import setup_logger, logger
 from .database import engine, Base, get_db_session
 from .models import TaskStatus
-from .routers import upload, ocr, questions, system, reports
+from .routers import upload, ocr, questions, system, reports, pdf
 
 
 logger = setup_logger(__name__)
@@ -151,6 +151,7 @@ async def validation_exception_handler(request, exc):
 
 # 注册路由
 app.include_router(upload.router, prefix="/api/v1/upload", tags=["文件上传"])
+app.include_router(pdf.router, prefix="/api/v1/upload", tags=["文件上传"])
 app.include_router(ocr.router, prefix="/api/v1/ocr", tags=["OCR处理"])
 app.include_router(questions.router, prefix="/api/v1/questions", tags=["错题管理"])
 app.include_router(system.router, prefix="/api/v1/system", tags=["系统监控"])
