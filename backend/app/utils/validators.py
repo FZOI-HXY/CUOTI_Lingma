@@ -43,3 +43,27 @@ def get_file_size_mb(file_path: str) -> float:
     """获取文件大小(MB)"""
     size_bytes = os.path.getsize(file_path)
     return size_bytes / (1024 * 1024)
+
+
+def validate_image_magic_bytes(content: bytes, filename: str) -> bool:
+    """Validate image file type by checking magic bytes."""
+    if len(content) < 8:
+        return False
+
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+
+    magic_signatures = {
+        'jpg': [b'\xff\xd8\xff'],
+        'jpeg': [b'\xff\xd8\xff'],
+        'png': [b'\x89PNG\r\n\x1a\n'],
+        'bmp': [b'BM'],
+        'webp': [b'RIFF'],  # WebP starts with RIFF....WEBP
+        'tiff': [b'II\x2a\x00', b'MM\x00\x2a'],
+        'tif': [b'II\x2a\x00', b'MM\x00\x2a'],
+    }
+
+    expected = magic_signatures.get(ext)
+    if expected is None:
+        return False
+
+    return any(content.startswith(sig) for sig in expected)

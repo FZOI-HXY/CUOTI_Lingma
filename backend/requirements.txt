@@ -24,9 +24,18 @@ numpy>=1.26.0
 # Utilities
 python-dotenv>=1.0.0
 loguru>=0.7.0
-aiofiles>=23.2.0
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
+
+# HTTP client (for VL service)
+requests>=2.31.0
+
+# PDF generation
+fpdf2>=2.7.0
+
+# Markdown to HTML conversion
+markdown>=3.5.0
+
+# Charting (for reports)
+matplotlib>=3.8.0
 
 # System Monitoring
 psutil>=5.9.0

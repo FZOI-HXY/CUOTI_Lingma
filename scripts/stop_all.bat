@@ -1,55 +1,77 @@
 @echo off
 chcp 65001 >nul
-REM 停止所有服务
+REM 错题管理系统 - 停止所有服务
+REM 仅停止本应用的进程（通过端口识别），不会影响其他 Python 程序
 
 echo.
 echo ============================================================
-echo 🛑 停止所有服务
+echo   停止所有错题管理系统服务
 echo ============================================================
 echo.
 
-echo 正在查找Python进程...
+echo 正在查找错题管理系统服务...
 echo.
 
-tasklist | findstr /i "python.exe" >nul
-if %errorlevel% neq 0 (
-    echo ℹ️  没有运行中的Python进程
+set "FOUND=0"
+
+REM 检查端口 8100（后端）
+netstat -ano | findstr ":8100 " | findstr "LISTENING" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   发现后端服务 (端口 8100)
+    set "FOUND=1"
+)
+
+REM 检查端口 8101（VL 引擎）
+netstat -ano | findstr ":8101 " | findstr "LISTENING" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   发现 VL 引擎 (端口 8101)
+    set "FOUND=1"
+)
+
+if "%FOUND%"=="0" (
+    echo   没有运行中的错题管理系统服务
     goto END
 )
 
-echo 发现以下Python进程:
 echo.
-tasklist | findstr /i "python.exe"
-echo.
-
-set /p confirm="是否停止所有Python进程? (y/n): "
+set /p confirm="是否停止以上服务? (y/n): "
 if /i not "%confirm%"=="y" goto END
 
 echo.
 echo 正在停止进程...
-taskkill /F /IM python.exe 2>nul
 
-if %errorlevel% equ 0 (
-    echo ✅ 已停止所有Python进程
-) else (
-    echo ⚠️  部分进程可能需要管理员权限才能停止
-    echo.
-    echo 请以管理员身份运行此脚本,或手动在任务管理器中结束进程
+REM 停止端口 8100 上的进程
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8100 " ^| findstr "LISTENING" 2^>nul') do (
+    echo   停止后端进程 (PID: %%a)
+    taskkill /F /PID %%a >nul 2>&1
 )
+
+REM 停止端口 8101 上的进程
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8101 " ^| findstr "LISTENING" 2^>nul') do (
+    echo   停止 VL 引擎 (PID: %%a)
+    taskkill /F /PID %%a >nul 2>&1
+)
+
+timeout /t 1 /nobreak >nul
+
+REM 验证端口已释放
+netstat -ano | findstr ":8100 " | findstr "LISTENING" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   端口 8100 仍被占用
+) else (
+    echo   端口 8100 已释放
+)
+
+netstat -ano | findstr ":8101 " | findstr "LISTENING" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   端口 8101 仍被占用
+) else (
+    echo   端口 8101 已释放
+)
+
+echo   服务已停止
 
 :END
-echo.
-
-REM 检查端口8000
-echo 检查端口8000...
-netstat -ano | findstr ":8000" | findstr "LISTENING" >nul
-if %errorlevel% equ 0 (
-    echo ⚠️  端口8000仍被占用
-    netstat -ano | findstr ":8000"
-) else (
-    echo ✅ 端口8000已释放
-)
-
 echo.
 echo ============================================================
 pause

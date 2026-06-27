@@ -1,6 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
-chcp 936 >nul 2>&1
+chcp 65001 >nul 2>&1
 
 REM ============================================================
 REM Cuoti Management System - Launcher
@@ -15,6 +15,7 @@ set "FRONTEND_DIR=%PROJECT_ROOT%\frontend"
 set "VENV_PYTHON=%PROJECT_ROOT%\venv312\Scripts\python.exe"
 set "ENV_FILE=%BACKEND_DIR%\.env"
 set "API_PORT=8100"
+set "VL_PORT=8101"
 
 title CuotiSystem Launcher
 
@@ -70,8 +71,10 @@ if !errorlevel! equ 0 (
     )
     if defined STALE_PID (
         echo   Killing PID !STALE_PID!...
-        taskkill /F /PID !STALE_PID! >nul 2>&1
-        timeout /t 2 /nobreak >nul
+        taskkill /PID !STALE_PID! >nul 2>&1
+        timeout /t 3 /nobreak >nul
+        REM Force kill if still alive
+        tasklist /FI "PID eq !STALE_PID!" 2>nul | find "!STALE_PID!" >nul && taskkill /F /PID !STALE_PID! >nul 2>&1
     )
     netstat -ano | findstr ":%API_PORT% " | findstr "LISTENING" >nul 2>&1
     if !errorlevel! equ 0 (
@@ -85,7 +88,20 @@ echo   [OK] Port %API_PORT% available
 echo.
 
 REM === Step 3: Start VL Engine ===
-set "VL_MODEL_DIR=E:\Program Files\PP_Models\official_models\PaddlePaddle\PaddleOCR-VL-1___6-GGUF"
+REM === Read VL config from .env ===
+set "VL_MODEL_DIR="
+set "VL_ENABLED=False"
+if exist "%ENV_FILE%" (
+    for /f "usebackq tokens=1,* delims==" %%a in ("%ENV_FILE%") do (
+        if "%%a"=="VL_MODEL_DIR" set "VL_MODEL_DIR=%%b"
+        if "%%a"=="VL_ENABLED" set "VL_ENABLED=%%b"
+    )
+)
+
+REM Set defaults if not configured
+if not defined VL_MODEL_DIR (
+    set "VL_MODEL_DIR=E:\Program Files\PP_Models\official_models\PaddlePaddle\PaddleOCR-VL-1___6-GGUF"
+)
 set "VL_MODEL=%VL_MODEL_DIR%\PaddleOCR-VL-1.6-GGUF.gguf"
 set "VL_MMPROJ=%VL_MODEL_DIR%\PaddleOCR-VL-1.6-GGUF-mmproj.gguf"
 set "LLAMA_SERVER=%PROJECT_ROOT%\tools\llama-cpp\llama-server.exe"
@@ -94,9 +110,9 @@ echo [3/5] Starting VL engine...
 
 if exist "%LLAMA_SERVER%" (
     if exist "%VL_MODEL%" (
-        echo   Launching llama-server on port 8101...
+        echo   Launching llama-server on port %VL_PORT%...
         call :start_vl
-        echo   [OK] VL engine started (port 8101)
+        echo   [OK] VL engine started (port %VL_PORT%)
         timeout /t 3 /nobreak >nul
     ) else (
         echo   [SKIP] VL model not found
@@ -118,7 +134,7 @@ echo.
 echo   Waiting for backend...
 
 for /l %%i in (1,1,10) do (
-    curl -s http://localhost:%API_PORT%/health >nul 2>&1
+    curl -sf http://localhost:%API_PORT%/health >nul 2>&1
     if !errorlevel! equ 0 (
         echo   [OK] Backend ready!
         goto backend_ready
@@ -169,15 +185,17 @@ exit /b 0
 REM === Subroutines ===
 
 :start_vl
-start "VL-Engine" /min "" "%LLAMA_SERVER%" -m "%VL_MODEL%" --mmproj "%VL_MMPROJ%" --port 8101 --host 0.0.0.0 --ctx-size 4096 --temp 0 -ngl 0
+if not exist "%PROJECT_ROOT%\logs" mkdir "%PROJECT_ROOT%\logs"
+start "VL-Engine" /min cmd /c ""%LLAMA_SERVER%" -m "%VL_MODEL%" --mmproj "%VL_MMPROJ%" --port %VL_PORT% --host 127.0.0.1 --ctx-size 4096 --temp 0 -ngl 0 >"%PROJECT_ROOT%\logs\vl-engine.log" 2>&1"
 goto :eof
 
 :start_backend
-cd /d "%BACKEND_DIR%"
-start "Backend-FastAPI" "" "%VENV_PYTHON%" -m uvicorn app.main:app --host 127.0.0.1 --port %API_PORT%
+if not exist "%PROJECT_ROOT%\logs" mkdir "%PROJECT_ROOT%\logs"
+start "Backend-FastAPI" /D "%BACKEND_DIR%" cmd /c ""%VENV_PYTHON%" -m uvicorn app.main:app --host 127.0.0.1 --port %API_PORT% >"%PROJECT_ROOT%\logs\backend.log" 2>&1"
 goto :eof
 
 :start_frontend
 cd /d "%FRONTEND_DIR%"
-start "Frontend-PyQt6" "" "%VENV_PYTHON%" main.py
+if not exist "%PROJECT_ROOT%\logs" mkdir "%PROJECT_ROOT%\logs"
+start "Frontend-PyQt6" cmd /c ""%VENV_PYTHON%" main.py >"%PROJECT_ROOT%\logs\frontend.log" 2>&1"
 goto :eof

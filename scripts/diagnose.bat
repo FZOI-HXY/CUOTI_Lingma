@@ -8,7 +8,7 @@ echo 🔍 系统诊断工具
 echo ============================================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 echo 📁 当前目录: %CD%
 echo.
@@ -73,12 +73,12 @@ echo.
 echo 4️⃣  检查端口占用...
 echo.
 
-netstat -ano | findstr ":8000" | findstr "LISTENING" >nul
+netstat -ano | findstr ":8100" | findstr "LISTENING" >nul
 if %errorlevel% equ 0 (
-    echo    ⚠️  端口 8000 已被占用
-    netstat -ano | findstr ":8000" | findstr "LISTENING"
+    echo    ⚠️  端口 8100 已被占用
+    netstat -ano | findstr ":8100" | findstr "LISTENING"
 ) else (
-    echo    ✅ 端口 8000 空闲
+    echo    ✅ 端口 8100 空闲
 )
 
 echo.

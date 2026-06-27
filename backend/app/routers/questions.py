@@ -107,6 +107,14 @@ async def delete_question(
     try:
         db.delete(question)
         db.commit()
+
+        # 同步清理归档文件
+        try:
+            from ..services.archive_service import archive_service
+            archive_service.delete_question_archive(question_id)
+        except Exception:
+            pass
+
         logger.info(f"Question deleted: id={question_id}")
         return {"message": "Question deleted successfully"}
         

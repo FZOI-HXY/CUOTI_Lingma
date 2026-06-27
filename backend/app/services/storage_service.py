@@ -1,8 +1,11 @@
+# DEPRECATED: This module is not used. Functionality has been absorbed by ocr_service.py and archive_service.py.
+# Safe to remove after verifying no external references.
+
 import os
 import shutil
 from pathlib import Path
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..config import settings
 from ..utils.logger import logger
@@ -42,7 +45,7 @@ class StorageService:
             output_dir.mkdir(parents=True, exist_ok=True)
             
             # 生成新文件名
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
             ext = Path(image_path).suffix
             new_filename = f"processed_{timestamp}{ext}"
             new_path = output_dir / new_filename
@@ -62,7 +65,7 @@ class StorageService:
         """清理临时文件"""
         try:
             if os.path.exists(file_path):
-                file_age = datetime.now() - datetime.fromtimestamp(os.path.getctime(file_path))
+                file_age = datetime.now(timezone.utc) - datetime.fromtimestamp(os.path.getctime(file_path), tz=timezone.utc)
                 
                 if file_age.days > keep_days:
                     os.remove(file_path)
@@ -82,8 +85,8 @@ class StorageService:
             return {
                 'path': file_path,
                 'size': stat.st_size,
-                'created_at': datetime.fromtimestamp(stat.st_ctime).isoformat(),
-                'modified_at': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                'created_at': datetime.fromtimestamp(stat.st_ctime, tz=timezone.utc).isoformat(),
+                'modified_at': datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
                 'exists': True
             }
             

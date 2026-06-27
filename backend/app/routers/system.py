@@ -4,10 +4,11 @@ from sqlalchemy import func
 import psutil
 import time
 import os
+import asyncio
 from datetime import datetime, timezone
 
-from ..database import get_db
-from ..models import Question, ProcessingLog
+from ..database import get_db, get_db_session
+from ..models import Question, ProcessingLog, TaskStatus
 from ..schemas import SystemStatus, LogEntry
 from ..config import settings
 from ..utils.logger import logger
@@ -36,15 +37,21 @@ async def get_system_status(db: Session = Depends(get_db)):
     """获取系统状态信息"""
     try:
         # CPU和内存使用率
-        cpu_percent = psutil.cpu_percent(interval=0.1)
-        memory = psutil.virtual_memory()
+        cpu_percent = await asyncio.to_thread(psutil.cpu_percent, interval=0.1)
+        memory = await asyncio.to_thread(psutil.virtual_memory)
         memory_percent = memory.percent
         
         # 磁盘使用率（跨平台兼容）
-        disk_percent = _get_disk_usage_percent()
+        disk_percent = await asyncio.to_thread(_get_disk_usage_percent)
         
         # 统计错题数量
         total_questions = db.query(func.count(Question.id)).scalar() or 0
+        
+        # 活跃任务数（从数据库查询正在处理的任务）
+        with get_db_session() as task_db:
+            active_count = task_db.query(func.count(TaskStatus.id)).filter(
+                TaskStatus.status == "processing"
+            ).scalar() or 0
         
         # 计算运行时间
         uptime = time.time() - START_TIME
@@ -53,7 +60,7 @@ async def get_system_status(db: Session = Depends(get_db)):
             cpu_percent=cpu_percent,
             memory_percent=memory_percent,
             disk_usage_percent=disk_percent,
-            active_tasks=0,  # TODO: 从任务队列获取
+            active_tasks=active_count,
             total_questions=total_questions,
             uptime_seconds=uptime
         )
@@ -148,8 +155,8 @@ async def get_statistics(db: Session = Depends(get_db)):
             'today_processed': today_count,
             'avg_processing_time_ms': float(avg_duration) if avg_duration else 0,
             'storage_info': {
-                'upload_dir_size': get_directory_size(settings.UPLOAD_DIR),
-                'processed_dir_size': get_directory_size(settings.PROCESSED_DIR)
+                'upload_dir_size': await asyncio.to_thread(get_directory_size, settings.UPLOAD_DIR),
+                'processed_dir_size': await asyncio.to_thread(get_directory_size, settings.PROCESSED_DIR)
             }
         }
         

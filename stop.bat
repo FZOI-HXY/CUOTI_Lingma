@@ -1,33 +1,50 @@
 @echo off
+setlocal enabledelayedexpansion
 chcp 65001 >nul 2>&1
 
-REM Stop all services
 echo.
-echo Stopping all services...
+echo ============================================================
+echo   Cuoti Management System - Stop All Services
+echo ============================================================
 echo.
 
-tasklist | findstr /i "python.exe" >nul 2>&1
-if errorlevel neq 0 (
-    echo No Python processes running
-    goto END
+set "API_PORT=8100"
+set "VL_PORT=8101"
+
+REM Stop backend
+echo [1/3] Stopping backend (port %API_PORT%)...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%API_PORT% " ^| findstr "LISTENING"') do (
+    echo   Sending graceful shutdown to PID %%a...
+    taskkill /PID %%a >nul 2>&1
 )
-
-echo Found Python processes:
-echo.
-tasklist | findstr /i "python.exe"
-echo.
-
-echo Stopping all Python processes...
-taskkill /F /IM python.exe >nul 2>&1
-
-if errorlevel equ 0 (
-    echo Processes stopped
-) else (
-    echo Failed to stop processes
+timeout /t 2 /nobreak >nul
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%API_PORT% " ^| findstr "LISTENING"') do (
+    echo   Force killing PID %%a...
+    taskkill /F /PID %%a >nul 2>&1
 )
+echo   [OK] Backend stopped
 
-:END
+REM Stop VL engine
+echo [2/3] Stopping VL engine (port %VL_PORT%)...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%VL_PORT% " ^| findstr "LISTENING"') do (
+    echo   Sending graceful shutdown to PID %%a...
+    taskkill /PID %%a >nul 2>&1
+)
+timeout /t 2 /nobreak >nul
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%VL_PORT% " ^| findstr "LISTENING"') do (
+    echo   Force killing PID %%a...
+    taskkill /F /PID %%a >nul 2>&1
+)
+echo   [OK] VL engine stopped
+
+REM Stop Tauri client
+echo [3/3] Stopping Tauri client...
+taskkill /IM cuoti-client.exe >nul 2>&1
+echo   [OK] Tauri client stopped
+
 echo.
-echo Done.
+echo ============================================================
+echo   All services stopped.
+echo ============================================================
+echo.
 pause
-exit /b 0

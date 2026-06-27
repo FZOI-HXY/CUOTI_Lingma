@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; connect-src 'self' http: https:; font-src 'self' data:"
     }
   },
   "bundle": {
@@ -38,7 +38,13 @@
   },
   "plugins": {
     "shell": {
-      "open": true
+      "_comment": "Shell open scope allows http/https URLs so the desktop app can open links in the user's system browser. This is acceptable for a desktop-only Tauri app.",
+      "open": {
+        "scope": [
+          { "name": "open-url", "url": "http://**" },
+          { "name": "open-url-https", "url": "https://**" }
+        ]
+      }
     }
   }
 }

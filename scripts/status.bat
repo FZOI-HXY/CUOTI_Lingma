@@ -42,23 +42,23 @@ echo.
 
 REM 3. 检查端口占用
 echo [3/4] 端口状态
-netstat -ano | findstr ":8000 " | findstr "LISTENING" >nul 2>&1
+netstat -ano | findstr ":8100 " | findstr "LISTENING" >nul 2>&1
 if !errorlevel! equ 0 (
-    echo   ⚠️  端口 8000 已被占用
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8000 " ^| findstr "LISTENING"') do (
+    echo   ⚠️  端口 8100 已被占用
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8100 " ^| findstr "LISTENING"') do (
         echo      PID: %%a
     )
 ) else (
-    echo   ✅ 端口 8000 空闲
+    echo   ✅ 端口 8100 空闲
 )
 echo.
 
 REM 4. 测试后端连接
 echo [4/4] 后端服务
-curl -s http://localhost:8000/health >nul 2>&1
+curl -s http://localhost:8100/health >nul 2>&1
 if !errorlevel! equ 0 (
     echo   ✅ 后端服务响应正常
-    echo      http://localhost:8000/health
+    echo      http://localhost:8100/health
 ) else (
     echo   ❌ 后端服务无响应
     echo      可能未启动或启动失败
@@ -72,7 +72,7 @@ echo ============================================================
 echo.
 echo   • 启动系统: start.bat
 echo   • 停止服务: stop.bat
-echo   • 查看API:  http://localhost:8000/docs
+echo   • 查看API:  http://localhost:8100/docs
 echo.
 echo ============================================================
 

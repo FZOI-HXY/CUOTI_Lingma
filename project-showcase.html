@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>错题管理系统 — 智能 OCR 错题管理平台</title>
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-light: #818cf8;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --code-bg: #1e293b;
+    --code-text: #e2e8f0;
+    --success: #10b981;
+    --warn: #f59e0b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
+    color: #fff;
+    padding: 80px 24px 64px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+    position: relative;
+  }
+
+  .hero p {
+    font-size: 1.15rem;
+    opacity: 0.9;
+    max-width: 640px;
+    margin: 0 auto 32px;
+    position: relative;
+  }
+
+  .badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    position: relative;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.25);
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+  }
+
+  /* ── Container ── */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── Section ── */
+  section {
+    padding: 56px 0;
+  }
+
+  section:nth-child(even) {
+    background: #fff;
+  }
+
+  .section-label {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--primary);
+    background: #eef2ff;
+    padding: 4px 12px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    letter-spacing: -0.01em;
+  }
+
+  h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  p, li { color: var(--text-muted); }
+
+  /* ── Feature Cards ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+    margin-top: 28px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 24px;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+
+  .card:hover {
+    box-shadow: 0 8px 30px rgba(0,0,0,0.07);
+    transform: translateY(-2px);
+  }
+
+  .card .icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    margin-bottom: 14px;
+  }
+
+  .card h4 { font-size: 1rem; margin-bottom: 6px; }
+  .card p  { font-size: 0.9rem; line-height: 1.65; }
+
+  /* ── Tech Stack ── */
+  .tech-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 24px;
+    font-size: 0.92rem;
+  }
+
+  .tech-table th, .tech-table td {
+    text-align: left;
+    padding: 12px 16px;
+  }
+
+  .tech-table th {
+    background: #f1f5f9;
+    font-weight: 700;
+    color: var(--text);
+    border-radius: 8px 8px 0 0;
+  }
+
+  .tech-table td {
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+
+  .tech-table tr:last-child td { border-bottom: none; }
+
+  /* ── Code Block ── */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    border-radius: 10px;
+    padding: 20px 24px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    margin-top: 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  code {
+    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", "SF Mono", Consolas, monospace;
+  }
+
+  /* ── API Table ── */
+  .api-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 24px;
+    font-size: 0.9rem;
+  }
+
+  .api-table th, .api-table td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .api-table th {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .api-table td { color: var(--text-muted); }
+
+  .method {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 44px;
+    text-align: center;
+  }
+
+  .method.get    { background: #dbeafe; color: #2563eb; }
+  .method.post   { background: #d1fae5; color: #059669; }
+  .method.delete { background: #fee2e2; color: #dc2626; }
+
+  /* ── Timeline / Roadmap ── */
+  .roadmap-list {
+    list-style: none;
+    margin-top: 24px;
+  }
+
+  .roadmap-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .roadmap-list li:last-child { border-bottom: none; }
+
+  .roadmap-status {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-top: 7px;
+  }
+
+  .roadmap-status.done   { background: var(--success); }
+  .roadmap-status.wip    { background: var(--warn); }
+
+  /* ── FAQ ── */
+  details {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin-top: 12px;
+    cursor: pointer;
+  }
+
+  details summary {
+    font-weight: 700;
+    font-size: 0.98rem;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  details summary::-webkit-details-marker { display: none; }
+
+  details summary::after {
+    content: "+";
+    font-size: 1.2rem;
+    color: var(--primary);
+    font-weight: 400;
+    transition: transform 0.2s;
+  }
+
+  details[open] summary::after {
+    content: "\2212";
+    transform: rotate(180deg);
+  }
+
+  details .faq-body {
+    margin-top: 12px;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.7;
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 40px 24px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+  }
+
+  footer a {
+    color: var(--primary);
+    text-decoration: none;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .hero { padding: 56px 20px 48px; }
+    section { padding: 40px 0; }
+    .card-grid { grid-template-columns: 1fr; }
+    .api-table { font-size: 0.78rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<header class="hero">
+  <h1>错题管理系统</h1>
+  <p>基于 PaddleOCR PP-StructureV3 的智能错题管理平台 — 拍照上传、自动识别、结构化归档、一键导出</p>
+  <div class="badge-row">
+    <span class="badge">Python 3.12</span>
+    <span class="badge">FastAPI</span>
+    <span class="badge">PaddleOCR</span>
+    <span class="badge">Tauri v2</span>
+    <span class="badge">PyQt6</span>
+    <span class="badge">SQLite</span>
+    <span class="badge">MIT License</span>
+  </div>
+</header>
+
+<!-- ═══════════════ 概述 ═══════════════ -->
+<section>
+  <div class="container">
+    <span class="section-label">Overview</span>
+    <h2>项目概述</h2>
+    <p>错题管理系统是一个全栈智能错题管理平台。用户通过拍照或上传错题图片，系统利用 <strong>PaddleOCR PP-StructureV3</strong> 进行版面分析和文字识别，自动将错题内容转化为结构化 Markdown 文档，支持分类、标签、检索和批量导出，帮助学生和教师高效管理错题资源。</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="icon" style="background:#eef2ff;color:#4f46e5;">📸</div>
+        <h4>智能 OCR 识别</h4>
+        <p>PP-StructureV3 版面分析 + PP-OCRv5 文字识别，一站式管线，支持表格和公式区域</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="background:#fce7f3;color:#db2777;">📝</div>
+        <h4>结构化 Markdown</h4>
+        <p>自动生成带标题层级、表格、公式的 Markdown 文档，保留原始版面结构</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="background:#d1fae5;color:#059669;">📦</div>
+        <h4>批量导出</h4>
+        <p>支持单题或批量导出为 Markdown / PDF / ZIP 归档，便于分享和打印</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="background:#fff7ed;color:#ea580c;">🖥️</div>
+        <h4>双客户端支持</h4>
+        <p>PyQt6 原生桌面客户端 + Tauri v2 WebView2 现代界面，Windows / macOS 双平台</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="background:#ede9fe;color:#7c3aed;">🏷️</div>
+        <h4>标签与分类</h4>
+        <p>支持科目分类、自定义标签、状态管理，灵活组织和检索错题</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="background:#e0f2fe;color:#0284c7;">📊</div>
+        <h4>系统监控</h4>
+        <p>实时 CPU / 内存 / 磁盘监控，处理日志审计，运行状态可视化</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 技术架构 ═══════════════ -->
+<section>
+  <div class="container">
+    <span class="section-label">Architecture</span>
+    <h2>技术架构</h2>
+    <p>后端采用 FastAPI 异步框架，OCR 引擎基于 PaddleX 实现，前端提供 PyQt6 和 Tauri v2 两种客户端方案。</p>
+
+    <table class="tech-table">
+      <thead>
+        <tr><th>层级</th><th>技术选型</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>后端框架</strong></td><td>FastAPI + Uvicorn</td><td>异步 RESTful API，自动生成 Swagger 文档</td></tr>
+        <tr><td><strong>ORM</strong></td><td>SQLAlchemy 2.0</td><td>声明式模型，支持 SQLite / MySQL 切换</td></tr>
+        <tr><td><strong>OCR 引擎</strong></td><td>PaddleOCR + PaddleX</td><td>PP-StructureV3 版面分析 + PP-OCRv5 识别</td></tr>
+        <tr><td><strong>VL 增强</strong></td><td>PaddleOCR-VL-1.6</td><td>通过 llama.cpp 运行的多模态大模型辅助识别</td></tr>
+        <tr><td><strong>图像处理</strong></td><td>OpenCV + Pillow</td><td>区域遮罩、版面可视化</td></tr>
+        <tr><td><strong>桌面客户端 A</strong></td><td>PyQt6</td><td>原生 Python GUI，三标签页界面</td></tr>
+        <tr><td><strong>桌面客户端 B</strong></td><td>Tauri v2 + Vanilla JS</td><td>Rust 驱动，WebView2 渲染，NSIS 打包</td></tr>
+        <tr><td><strong>日志</strong></td><td>Loguru</td><td>结构化日志，支持文件轮转</td></tr>
+        <tr><td><strong>配置管理</strong></td><td>pydantic-settings</td><td>环境变量 + .env 文件</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════ 快速开始 ═══════════════ -->
+<section>
+  <div class="container">
+    <span class="section-label">Quick Start</span>
+    <h2>快速开始</h2>
+    <p>以下步骤帮助你在本地快速启动错题管理系统：</p>
+
+    <h3 style="margin-top:24px;">1. 克隆项目</h3>
+    <pre><code>git clone &lt;repository-url&gt;
+cd CUOTI_Lingma</code></pre>
+
+    <h3 style="margin-top:20px;">2. 启动后端服务</h3>
+    <pre><code>cd backend
+pip install -r requirements.txt
+cp .env.example .env          # 编辑 .env 配置数据库连接
+python -m app.main            # 默认端口 8100</code></pre>
+
+    <h3 style="margin-top:20px;">3. 启动桌面客户端</h3>
+    <pre><code># 方式 A: PyQt6 客户端
+cd frontend
+pip install -r requirements.txt
+python main.py
+
+# 方式 B: Tauri 客户端 (需要 Node.js + Rust)
+cd APP
+npm install
+npm run tauri dev</code></pre>
+
+    <h3 style="margin-top:20px;">4. 访问 API 文档</h3>
+    <p>启动后端后，打开浏览器访问 <code>http://localhost:8100/docs</code> 查看 Swagger API 文档。</p>
+  </div>
+</section>
+
+<!-- ═══════════════ API 端点 ═══════════════ -->
+<section>
+  <div class="container">
+    <span class="section-label">API</span>
+    <h2>API 端点一览</h2>
+
+    <table class="api-table">
+      <thead>
+        <tr><th>方法</th><th>路径</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="method get">GET</span></td><td><code>/health</code></td><td>健康检查</td></tr>
+        <tr><td><span class="method get">GET</span></td><td><code>/docs</code></td><td>Swagger API 文档</td></tr>
+        <tr><td><span class="method post">POST</span></td><td><code>/api/v1/upload/image</code></td><td>上传错题图片 (JPG/PNG/BMP/TIFF/WEBP, ≤10MB)</td></tr>
+        <tr><td><span class="method post">POST</span></td><td><code>/api/v1/ocr/process</code></td><td>启动 OCR 异步处理任务</td></tr>
+        <tr><td><span class="method get">GET</span></td><td><code>/api/v1/ocr/status/{task_id}</code></td><td>查询 OCR 任务状态与进度</td></tr>
+        <tr><td><span class="method get">GET</span></td><td><code>/api/v1/ocr/vl/status</code></td><td>VL 增强模式运行状态</td></tr>
+        <tr><td><span class="method get">GET</span></td><td><code>/api/v1/questions/</code></td><td>错题列表 (分页 + 状态筛选)</td></tr>
+        <tr><td><span class="method get">GET</span></td><td><code>/api/v1/questions/{id}</code></td><td>错题详情</td></tr>
+        <tr><td><span class="method post">POST</span></td><td><code>/api/v1/questions/</code></td><td>手动创建错题记录</td></tr>
+        <tr><td><span class="method delete">DELETE</span></td><td><code>/api/v1/questions/{id}</code></td><td>删除错题</td></tr>
+        <tr><td><span class="method get">GET</span></td><td><code>/api/v1/system/status</code></td><td>系统运行状态 (CPU/内存/磁盘)</td></tr>
+        <tr><td><span class="method get">GET</span></td><td><code>/api/v1/system/stats</code></td><td>统计数据汇总</td></tr>
+        <tr><td><span class="method get">GET</span></td><td><code>/api/v1/reports/{id}/markdown</code></td><td>下载单题 Markdown</td></tr>
+        <tr><td><span class="method get">GET</span></td><td><code>/api/v1/reports/{id}/pdf</code></td><td>下载单题 PDF</td></tr>
+        <tr><td><span class="method get">GET</span></td><td><code>/api/v1/reports/{id}/download</code></td><td>下载 ZIP 归档</td></tr>
+        <tr><td><span class="method post">POST</span></td><td><code>/api/v1/reports/batch</code></td><td>批量合并导出</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════ 项目结构 ═══════════════ -->
+<section>
+  <div class="container">
+    <span class="section-label">Structure</span>
+    <h2>项目结构</h2>
+    <pre><code>CUOTI_Lingma/
+├── backend/                  # FastAPI 后端服务
+│   ├── app/
+│   │   ├── main.py           # 应用入口 + 生命周期
+│   │   ├── config.py         # pydantic-settings 配置
+│   │   ├── database.py       # SQLAlchemy 引擎
+│   │   ├── models.py         # ORM 模型 (6 张表)
+│   │   ├── schemas.py        # Pydantic 数据校验
+│   │   ├── routers/          # API 路由 (upload/ocr/questions/system/reports)
+│   │   ├── services/         # 业务逻辑 (OCR/版面/Markdown/图片/归档)
+│   │   ├── core/             # 异常处理
+│   │   └── utils/            # 日志、工具
+│   └── storage/questions/    # 处理结果归档
+│
+├── frontend/                 # PyQt6 桌面客户端
+│   ├── main.py               # QApplication 入口
+│   ├── ui/                   # 主窗口 / 上传面板 / 错题管理 / 监控面板
+│   ├── api/                  # HTTP API 客户端
+│   └── config/               # 配置管理
+│
+├── APP/                      # Tauri v2 桌面应用
+│   ├── src-tauri/            # Rust 后端 (Tauri 命令)
+│   └── web/                  # Vanilla JS 前端
+│
+├── docs/                     # 20+ 篇操作&维护文档
+└── README.md</code></pre>
+  </div>
+</section>
+
+<!-- ═══════════════ 数据库设计 ═══════════════ -->
+<section>
+  <div class="container">
+    <span class="section-label">Database</span>
+    <h2>数据库设计</h2>
+    <table class="tech-table">
+      <thead>
+        <tr><th>表名</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>users</code></td><td>用户信息表</td></tr>
+        <tr><td><code>questions</code></td><td>错题记录表 (图片路径、OCR 结果、标签、科目、状态)</td></tr>
+        <tr><td><code>task_status</code></td><td>异步任务状态持久化 (防止服务重启丢失)</td></tr>
+        <tr><td><code>processing_logs</code></td><td>处理日志审计表</td></tr>
+        <tr><td><code>system_config</code></td><td>系统配置键值对存储</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════ 开发路线图 ═══════════════ -->
+<section>
+  <div class="container">
+    <span class="section-label">Roadmap</span>
+    <h2>开发路线图</h2>
+    <ul class="roadmap-list">
+      <li>
+        <span class="roadmap-status done"></span>
+        <div>
+          <h4 style="margin:0;">OCR 版面分析 + 文字识别</h4>
+          <p style="margin:2px 0 0;font-size:0.88rem;">PP-StructureV3 一站式管线 + PP-OCRv5，VL-1.6 增强模式</p>
+        </div>
+      </li>
+      <li>
+        <span class="roadmap-status done"></span>
+        <div>
+          <h4 style="margin:0;">双桌面客户端 (PyQt6 + Tauri v2)</h4>
+          <p style="margin:2px 0 0;font-size:0.88rem;">原生 Python GUI 与 Rust 驱动的 WebView2 现代界面</p>
+        </div>
+      </li>
+      <li>
+        <span class="roadmap-status done"></span>
+        <div>
+          <h4 style="margin:0;">错题 CRUD、标签系统、批量导出</h4>
+          <p style="margin:2px 0 0;font-size:0.88rem;">Markdown / PDF / ZIP 三种导出格式，支持批量合并</p>
+        </div>
+      </li>
+      <li>
+        <span class="roadmap-status wip"></span>
+        <div>
+          <h4 style="margin:0;">PDF 文件处理</h4>
+          <p style="margin:2px 0 0;font-size:0.88rem;">支持直接上传 PDF 试卷，自动提取错题区域</p>
+        </div>
+      </li>
+      <li>
+        <span class="roadmap-status wip"></span>
+        <div>
+          <h4 style="margin:0;">AI 错题分类推荐</h4>
+          <p style="margin:2px 0 0;font-size:0.88rem;">基于大模型的智能标签推荐与知识图谱关联</p>
+        </div>
+      </li>
+      <li>
+        <span class="roadmap-status wip"></span>
+        <div>
+          <h4 style="margin:0;">多用户协作</h4>
+          <p style="margin:2px 0 0;font-size:0.88rem;">班级 / 学习小组共享错题库，教师批注功能</p>
+        </div>
+      </li>
+      <li>
+        <span class="roadmap-status wip"></span>
+        <div>
+          <h4 style="margin:0;">云端同步备份</h4>
+          <p style="margin:2px 0 0;font-size:0.88rem;">跨设备同步，WebDAV / OSS 存储支持</p>
+        </div>
+      </li>
+      <li>
+        <span class="roadmap-status wip"></span>
+        <div>
+          <h4 style="margin:0;">移动端 APP</h4>
+          <p style="margin:2px 0 0;font-size:0.88rem;">拍照即处理，React Native / Flutter 跨平台方案</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════ FAQ ═══════════════ -->
+<section>
+  <div class="container">
+    <span class="section-label">FAQ</span>
+    <h2>常见问题</h2>
+
+    <details>
+      <summary>错题管理系统支持哪些图片格式？</summary>
+      <div class="faq-body">支持 JPG、PNG、BMP、TIFF、WEBP 格式，单文件大小限制 10MB。建议使用清晰的照片或扫描件以获得最佳 OCR 识别效果。</div>
+    </details>
+
+    <details>
+      <summary>OCR 识别需要联网吗？</summary>
+      <div class="faq-body">不需要。PaddleOCR 引擎完全在本地运行，所有模型文件在首次使用时自动下载到本地。VL 增强模式可选启用，需额外下载 VL-1.6 模型。</div>
+    </details>
+
+    <details>
+      <summary>支持哪些导出格式？</summary>
+      <div class="faq-body">支持 Markdown (.md)、PDF (.pdf) 和 ZIP 归档三种导出格式。可以单题导出，也可以批量合并导出，方便打印和分享。</div>
+    </details>
+
+    <details>
+      <summary>如何切换 PyQt6 和 Tauri 客户端？</summary>
+      <div class="faq-body">两个客户端共享同一个后端 API。PyQt6 客户端通过 <code>frontend/</code> 目录启动，Tauri 客户端通过 <code>APP/</code> 目录启动。你可以根据使用习惯选择任一客户端。</div>
+    </details>
+
+    <details>
+      <summary>数据库能切换到 MySQL 吗？</summary>
+      <div class="faq-body">可以。在 <code>.env</code> 文件中修改 <code>DATABASE_URL</code> 为 MySQL 连接字符串即可。SQLAlchemy 会自动适配，无需修改代码。默认使用 SQLite 便于开箱即用。</div>
+    </details>
+
+    <details>
+      <summary>项目使用什么许可证？</summary>
+      <div class="faq-body">MIT License。你可以自由使用、修改和分发本项目，包括商业用途。详见项目根目录的 LICENSE 文件。</div>
+    </details>
+  </div>
+</section>
+
+<!-- ═══════════════ 下一步 ═══════════════ -->
+<section>
+  <div class="container">
+    <span class="section-label">Next Steps</span>
+    <h2>下一步</h2>
+    <div class="card-grid">
+      <div class="card" style="text-align:center;">
+        <div class="icon" style="background:#eef2ff;color:#4f46e5;margin:0 auto 14px;">⭐</div>
+        <h4>Star 项目</h4>
+        <p>在 GitHub 上给项目点个 Star，支持我们持续迭代</p>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="icon" style="background:#fce7f3;color:#db2777;margin:0 auto 14px;">🐛</div>
+        <h4>提交 Issue</h4>
+        <p>遇到问题或有功能建议？欢迎提交 Issue 反馈</p>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="icon" style="background:#d1fae5;color:#059669;margin:0 auto 14px;">🔧</div>
+        <h4>参与贡献</h4>
+        <p>Fork 项目，提交 PR，一起建设更好的错题管理工具</p>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="icon" style="background:#fff7ed;color:#ea580c;margin:0 auto 14px;">📖</div>
+        <h4>阅读文档</h4>
+        <p>查看 <code>docs/</code> 目录下 20+ 篇详细操作和维护文档</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p><strong>错题管理系统</strong> &mdash; MIT License &mdash; Built with Python, FastAPI, PaddleOCR &amp; Tauri</p>
+</footer>
+
+</body>
+</html>

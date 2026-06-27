@@ -13,9 +13,10 @@
       <div class="header-left">
         <h1 class="app-title">错题管理系统</h1>
         <span id="server-status" class="status-badge status-disconnected">未连接</span>
+        <span id="server-url-display" class="server-url-display"></span>
       </div>
       <div class="header-right">
-        <button id="btn-settings" class="icon-btn" title="设置">⚙</button>
+        <button id="btn-settings" class="icon-btn" title="设置" aria-label="设置">⚙</button>
       </div>
     </header>
 
@@ -24,15 +25,15 @@
       <!-- 侧边栏 -->
       <aside class="sidebar">
         <nav class="nav-menu">
-          <a class="nav-item active" data-page="upload">
+          <a class="nav-item active" data-page="upload" href="#" role="tab">
             <span class="nav-icon">📤</span>
             <span>上传识别</span>
           </a>
-          <a class="nav-item" data-page="questions">
+          <a class="nav-item" data-page="questions" href="#" role="tab">
             <span class="nav-icon">📚</span>
             <span>错题本</span>
           </a>
-          <a class="nav-item" data-page="stats">
+          <a class="nav-item" data-page="stats" href="#" role="tab">
             <span class="nav-icon">📊</span>
             <span>数据统计</span>
           </a>
@@ -83,6 +84,7 @@
               <h3>识别结果</h3>
               <div class="result-actions">
                 <button id="btn-save-question" class="btn btn-primary">保存到错题本</button>
+                <button id="btn-download-zip" class="btn btn-secondary">下载全部文件</button>
                 <button id="btn-download-md" class="btn btn-secondary">下载 Markdown</button>
                 <button id="btn-new-upload" class="btn btn-secondary">重新上传</button>
               </div>
@@ -94,6 +96,11 @@
               <div class="result-markdown">
                 <div id="result-md-content" class="md-content"></div>
               </div>
+            </div>
+            <!-- 版面分析图 -->
+            <div id="result-layout-area" style="display:none;">
+              <h4>版面分析</h4>
+              <div id="result-layout-images" class="layout-grid"></div>
             </div>
           </div>
         </div>
@@ -189,17 +196,21 @@
     </main>
 
     <!-- 设置弹窗 -->
-    <div id="settings-modal" class="modal" style="display:none;">
+    <div id="settings-modal" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <div class="modal-overlay"></div>
       <div class="modal-content">
         <div class="modal-header">
-          <h3>设置</h3>
+          <h3 id="settings-title">设置</h3>
           <button class="modal-close" id="btn-close-settings">&times;</button>
         </div>
         <div class="modal-body">
           <div class="form-group">
             <label>服务器地址</label>
             <input type="text" id="input-server-url" class="form-input" placeholder="http://localhost:8100">
+          </div>
+          <div class="form-group">
+            <label>API 密钥</label>
+            <input type="password" id="input-api-key" class="form-input" placeholder="留空则不启用认证">
           </div>
           <div class="form-group">
             <label>默认启用 VL 增强</label>
@@ -217,11 +228,11 @@
     </div>
 
     <!-- 题目详情弹窗 -->
-    <div id="detail-modal" class="modal" style="display:none;">
+    <div id="detail-modal" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="detail-title">
       <div class="modal-overlay"></div>
       <div class="modal-content modal-large">
         <div class="modal-header">
-          <h3>题目详情</h3>
+          <h3 id="detail-title">题目详情</h3>
           <button class="modal-close" id="btn-close-detail">&times;</button>
         </div>
         <div class="modal-body detail-body">
@@ -237,8 +248,14 @@
             <div id="detail-tags" class="detail-tags"></div>
             <div id="detail-md" class="md-content"></div>
           </div>
+          <!-- 版面分析图 -->
+          <div id="detail-layout-area" style="display:none; width:100%; margin-top:12px;">
+            <h4>版面分析</h4>
+            <div id="detail-layout-images" class="layout-grid"></div>
+          </div>
         </div>
         <div class="modal-footer">
+          <button id="btn-detail-download-zip" class="btn btn-primary">下载全部文件</button>
           <button id="btn-detail-export-md" class="btn btn-secondary">导出 Markdown</button>
           <button id="btn-detail-export-pdf" class="btn btn-secondary">导出 PDF</button>
           <button id="btn-detail-delete" class="btn btn-danger">删除</button>

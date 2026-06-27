@@ -88,14 +88,46 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# 配置CORS — 使用通配符以支持 Tauri WebView2 的各种来源格式
+# 配置CORS — 使用配置白名单，仅允许受信任的来源
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# API Key 认证中间件（C1: 路由认证 + C2: 静态文件保护）
+@app.middleware("http")
+async def api_key_auth_middleware(request, call_next):
+    """
+    API Key authentication middleware.
+    - Skips auth for public endpoints (health, docs, root).
+    - If API_KEY is empty, skips all auth (development mode).
+    - If API_KEY is set, requires Authorization: Bearer {key} on /api/* and static file routes.
+    """
+    path = request.url.path
+
+    # Public endpoints that never require auth
+    public_paths = {"/health", "/", "/docs", "/openapi.json", "/redoc"}
+    if path in public_paths:
+        return await call_next(request)
+
+    # Development mode: no API_KEY configured, skip all auth
+    if not settings.API_KEY:
+        return await call_next(request)
+
+    # Routes that require authentication: /api/* and static file mounts
+    static_prefixes = ("/uploads/", "/processed/", "/storage/")
+    requires_auth = path.startswith("/api/") or any(path.startswith(p) for p in static_prefixes)
+
+    if requires_auth:
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer ") or auth_header[7:] != settings.API_KEY:
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+
+    return await call_next(request)
 
 
 # 全局异常处理器
@@ -127,8 +159,10 @@ app.include_router(reports.router, prefix="/api/v1/reports", tags=["报告下载
 # 挂载静态文件目录（用于客户端访问上传和处理的图片）
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 os.makedirs(settings.PROCESSED_DIR, exist_ok=True)
+os.makedirs(settings.STORAGE_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 app.mount("/processed", StaticFiles(directory=settings.PROCESSED_DIR), name="processed")
+app.mount("/storage", StaticFiles(directory=settings.STORAGE_DIR), name="storage")
 
 
 # 健康检查接口

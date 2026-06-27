@@ -8,10 +8,11 @@ from ..utils.logger import logger
 from ..utils.validators import (
     generate_unique_filename,
     validate_image_type,
+    validate_image_magic_bytes,
     get_file_size_mb,
     calculate_file_hash
 )
-from ..core.exceptions import FileUploadError
+from ..core.exceptions import AppException, FileUploadError
 from ..schemas import UploadResponse
 
 router = APIRouter()
@@ -41,15 +42,26 @@ async def upload_image(
                 details={"filename": file.filename}
             )
         
-        # 读取文件内容以验证大小
-        contents = await file.read()
-        file_size = len(contents)
-        
-        # 验证文件大小
-        if file_size > settings.MAX_FILE_SIZE:
-            raise FileUploadError(
-                message=f"File too large. Max size: {settings.MAX_FILE_SIZE / (1024*1024)}MB",
-                details={"file_size": file_size, "max_size": settings.MAX_FILE_SIZE}
+        # 流式读取文件内容，分块检查大小限制（C3: 防止内存溢出）
+        chunks = []
+        total_size = 0
+        MAX_SIZE = settings.MAX_FILE_SIZE
+        while chunk := await file.read(65536):  # 64KB chunks
+            total_size += len(chunk)
+            if total_size > MAX_SIZE:
+                raise AppException(
+                    status_code=413,
+                    message=f"文件过大: 超过 {MAX_SIZE // 1024 // 1024}MB 限制"
+                )
+            chunks.append(chunk)
+        contents = b"".join(chunks)
+        file_size = total_size
+
+        # H1: Magic byte 文件类型验证
+        if not validate_image_magic_bytes(contents, file.filename):
+            raise AppException(
+                status_code=400,
+                message=f"文件类型不匹配: {file.filename} 的内容不是有效的图片文件"
             )
         
         # 生成唯一文件名
@@ -72,7 +84,7 @@ async def upload_image(
         return UploadResponse(
             file_id=unique_filename,
             filename=file.filename,
-            file_path=file_path,
+            file_path=unique_filename,  # 仅返回文件名，不暴露服务器端绝对路径
             file_size=file_size,
             content_type=file.content_type or "image/jpeg",
             message="File uploaded successfully"
@@ -83,8 +95,8 @@ async def upload_image(
     except Exception as e:
         logger.error(f"File upload failed: {str(e)}")
         raise FileUploadError(
-            message=f"Upload failed: {str(e)}",
-            details={"error": str(e)}
+            message="Upload failed due to an internal error",
+            details={}
         )
 
 
@@ -100,42 +112,57 @@ async def upload_batch_images(
     
     for file in files:
         try:
-            # 复用单文件上传逻辑
-            contents = await file.read()
-            file_size = len(contents)
-            
-            if file_size > settings.MAX_FILE_SIZE:
-                errors.append({
+            # 复用单文件上传逻辑 — 流式读取 + 大小限制（C3）
+            chunks = []
+            total_size = 0
+            MAX_SIZE = settings.MAX_FILE_SIZE
+            while chunk := await file.read(65536):  # 64KB chunks
+                total_size += len(chunk)
+                if total_size > MAX_SIZE:
+                    errors.append({
+                        "filename": file.filename,
+                        "error": f"文件过大: 超过 {MAX_SIZE // 1024 // 1024}MB 限制"
+                    })
+                    break
+                chunks.append(chunk)
+            else:
+                # Only process if we didn't break (file within size limit)
+                contents = b"".join(chunks)
+                file_size = total_size
+
+                # H1: Magic byte 文件类型验证
+                if not validate_image_magic_bytes(contents, file.filename):
+                    errors.append({
+                        "filename": file.filename,
+                        "error": f"文件类型不匹配: 内容不是有效的图片文件"
+                    })
+                    continue
+
+                if not validate_image_type(file.filename):
+                    errors.append({
+                        "filename": file.filename,
+                        "error": "Unsupported file type"
+                    })
+                    continue
+
+                unique_filename = generate_unique_filename(file.filename)
+                file_path = os.path.join(settings.UPLOAD_DIR, unique_filename)
+
+                os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+                with open(file_path, "wb") as f:
+                    f.write(contents)
+
+                results.append({
+                    "file_id": unique_filename,
                     "filename": file.filename,
-                    "error": "File too large"
+                    "file_size": file_size
                 })
-                continue
-            
-            if not validate_image_type(file.filename):
-                errors.append({
-                    "filename": file.filename,
-                    "error": "Unsupported file type"
-                })
-                continue
-            
-            unique_filename = generate_unique_filename(file.filename)
-            file_path = os.path.join(settings.UPLOAD_DIR, unique_filename)
-            
-            os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-            with open(file_path, "wb") as f:
-                f.write(contents)
-            
-            results.append({
-                "file_id": unique_filename,
-                "filename": file.filename,
-                "file_path": file_path,
-                "file_size": file_size
-            })
             
         except Exception as e:
+            logger.error(f"Batch upload failed for {file.filename}: {str(e)}")
             errors.append({
                 "filename": file.filename,
-                "error": str(e)
+                "error": "Upload failed"
             })
     
     return {

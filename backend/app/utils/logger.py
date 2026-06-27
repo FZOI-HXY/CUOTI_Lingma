@@ -5,9 +5,15 @@ from loguru import logger
 from app.config import settings
 
 
+_initialized = False
+
+
 def setup_logger(name: str = None):
     """配置日志系统"""
-    
+    global _initialized
+    if _initialized:
+        return logger
+
     # 移除默认的handler
     logger.remove()
     
@@ -43,6 +49,7 @@ def setup_logger(name: str = None):
         encoding="utf-8"
     )
     
+    _initialized = True
     return logger
 
 

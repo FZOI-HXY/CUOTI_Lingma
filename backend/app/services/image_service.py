@@ -1,3 +1,6 @@
+# DEPRECATED: This module is not used. Functionality has been absorbed by ocr_service.py and archive_service.py.
+# Safe to remove after verifying no external references.
+
 import cv2
 import numpy as np
 from typing import Tuple

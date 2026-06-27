@@ -5,6 +5,7 @@
 const App = {
   // 配置
   serverUrl: 'http://localhost:8100',
+  apiKey: '',
   selectedFiles: [],
   currentTaskId: null,
   currentQuestionId: null,
@@ -12,6 +13,13 @@ const App = {
   currentPage: 1,
   pageSize: 20,
   selectedQuestions: new Set(),
+  _blobUrls: [],  // 跟踪已创建的 blob URL 以便释放
+
+  // 释放所有已跟踪的 blob URL
+  revokeBlobUrls() {
+    this._blobUrls.forEach(url => URL.revokeObjectURL(url));
+    this._blobUrls = [];
+  },
 
   // 初始化
   init() {
@@ -32,7 +40,11 @@ const App = {
 
   async fetchApi(path, options = {}) {
     const url = this.api(path);
-    const resp = await fetch(url, options);
+    const headers = options.headers || {};
+    if (this.apiKey) {
+      headers['Authorization'] = `Bearer ${this.apiKey}`;
+    }
+    const resp = await fetch(url, { ...options, headers });
     if (!resp.ok) {
       const body = await resp.json().catch(() => ({}));
       throw new Error(body.error || body.detail || `HTTP ${resp.status}`);
@@ -82,7 +94,7 @@ const App = {
     return this.serverUrl + normalized;
   },
 
-  // 简单 Markdown 渲染
+  // 简单 Markdown 渲染（含 XSS 防护）
   renderMarkdown(md) {
     if (!md) return '<p style="color:#9ca3af">暂无识别结果</p>';
     let html = this.escapeHtml(md);
@@ -93,10 +105,22 @@ const App = {
     // Bold & italic
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    // Images
-    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%">');
-    // Links
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    // Images — 仅允许 http/https/data 协议
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+      const trimmed = url.trim();
+      if (/^(https?:|data:image\/)/i.test(trimmed) && !/["'<>]/.test(trimmed)) {
+        return `<img src="${trimmed}" alt="${this.escapeHtml(alt)}" style="max-width:100%">`;
+      }
+      return match; // 不安全的协议或含危险字符，保留原始文本
+    });
+    // Links — 仅允许 http/https 协议，添加 noopener
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+      const trimmed = url.trim();
+      if (/^https?:\/\//i.test(trimmed)) {
+        return `<a href="${trimmed}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+      }
+      return match; // 不安全的协议，保留原始文本
+    });
     // Lists
     html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
     html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
@@ -141,14 +165,39 @@ const App = {
       const saved = localStorage.getItem('cuoti-settings');
       if (saved) {
         const s = JSON.parse(saved);
-        if (s.serverUrl) this.serverUrl = s.serverUrl;
+        if (s.serverUrl) {
+          try {
+            const parsed = new URL(s.serverUrl);
+            if (['http:', 'https:'].includes(parsed.protocol)) {
+              this.serverUrl = s.serverUrl;
+            }
+          } catch { /* ignore invalid saved URL */ }
+        }
+        if (s.apiKey) {
+          this.apiKey = s.apiKey;
+        }
+        if (s.defaultVl !== undefined) {
+          document.getElementById('input-default-vl').checked = s.defaultVl;
+        }
       }
     } catch (e) { /* ignore */ }
+    this.updateServerDisplay();
+  },
+
+  updateServerDisplay() {
+    const el = document.getElementById('server-url-display');
+    if (el) {
+      // 仅当不是默认 localhost 时才显示服务器地址
+      const display = this.serverUrl !== 'http://localhost:8100' ? this.serverUrl : '';
+      el.textContent = display;
+      el.title = display ? `当前服务器: ${display}` : '';
+    }
   },
 
   saveSettingsData() {
     const data = {
       serverUrl: this.serverUrl,
+      apiKey: this.apiKey,
       defaultVl: document.getElementById('input-default-vl').checked
     };
     localStorage.setItem('cuoti-settings', JSON.stringify(data));
@@ -167,11 +216,13 @@ const App = {
       if (resp.ok) {
         badge.textContent = '已连接';
         badge.className = 'status-badge status-connected';
+        this.updateServerDisplay();
         return true;
       }
     } catch (e) { /* ignore */ }
     badge.textContent = '未连接';
     badge.className = 'status-badge status-disconnected';
+    this.updateServerDisplay();
     return false;
   },
 
@@ -216,6 +267,7 @@ const App = {
     document.getElementById('btn-clear-files').addEventListener('click', () => this.clearFiles());
     document.getElementById('btn-save-question').addEventListener('click', () => this.saveQuestion());
     document.getElementById('btn-download-md').addEventListener('click', () => this.downloadMarkdown());
+    document.getElementById('btn-download-zip').addEventListener('click', () => this.downloadZip());
     document.getElementById('btn-new-upload').addEventListener('click', () => this.resetUpload());
 
     // 错题本
@@ -237,10 +289,24 @@ const App = {
 
     // 详情弹窗
     document.getElementById('btn-close-detail').addEventListener('click', () => this.closeDetail());
+    document.getElementById('btn-detail-download-zip').addEventListener('click', () => this.downloadDetailZip());
     document.getElementById('btn-detail-export-md').addEventListener('click', () => this.exportDetailMarkdown());
     document.getElementById('btn-detail-export-pdf').addEventListener('click', () => this.exportDetailPdf());
     document.getElementById('btn-detail-delete').addEventListener('click', () => this.deleteCurrentQuestion());
     document.querySelector('#detail-modal .modal-overlay').addEventListener('click', () => this.closeDetail());
+
+    // Escape 关闭弹窗
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.closeSettings();
+        this.closeDetail();
+      }
+    });
+
+    // 设置输入框回车提交
+    document.getElementById('input-server-url').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.applySettings();
+    });
   },
 
   // ========================
@@ -282,6 +348,9 @@ const App = {
     const preview = document.getElementById('upload-preview');
     const fileList = document.getElementById('file-list');
 
+    // 释放旧的 blob URL
+    this.revokeBlobUrls();
+
     if (this.selectedFiles.length === 0) {
       preview.style.display = 'none';
       return;
@@ -295,6 +364,7 @@ const App = {
       item.className = 'file-item';
 
       const thumbUrl = URL.createObjectURL(file);
+      this._blobUrls.push(thumbUrl);  // 跟踪以便释放
       item.innerHTML = `
         <div class="file-info">
           <img class="file-thumb" src="${thumbUrl}" alt="">
@@ -323,6 +393,7 @@ const App = {
   },
 
   resetUpload() {
+    this.revokeBlobUrls();
     this.selectedFiles = [];
     this.currentTaskId = null;
     this.currentQuestionId = null;
@@ -397,8 +468,19 @@ const App = {
 
     const progressFill = document.getElementById('progress-fill');
     const processingText = document.getElementById('processing-text');
+    let pollCount = 0;
+    const maxPolls = 150; // 最多轮询 150 次 (2秒 × 150 = 5 分钟)
 
     this.pollingTimer = setInterval(async () => {
+      pollCount++;
+      if (pollCount > maxPolls) {
+        clearInterval(this.pollingTimer);
+        this.pollingTimer = null;
+        this.toast('处理超时，请检查后端状态', 'error');
+        this.resetUpload();
+        return;
+      }
+
       try {
         const resp = await this.fetchApi(`/api/v1/ocr/status/${this.currentTaskId}`);
         const data = await resp.json();
@@ -429,6 +511,7 @@ const App = {
         clearInterval(this.pollingTimer);
         this.pollingTimer = null;
         this.toast(`查询状态失败: ${error.message}`, 'error');
+        this.resetUpload();
       }
     }, 2000);
   },
@@ -444,7 +527,9 @@ const App = {
       // 显示原图
       const resultImg = document.getElementById('result-image');
       if (originalFile) {
-        resultImg.src = URL.createObjectURL(originalFile);
+        const blobUrl = URL.createObjectURL(originalFile);
+        this._blobUrls.push(blobUrl);
+        resultImg.src = blobUrl;
       } else if (question.original_image_path) {
         resultImg.src = this.imageUrl(question.original_image_path);
       }
@@ -452,6 +537,9 @@ const App = {
       // 显示 Markdown
       const mdContent = document.getElementById('result-md-content');
       mdContent.innerHTML = this.renderMarkdown(question.ocr_result_md);
+
+      // 显示版面分析图
+      this.renderLayoutImages(question.layout_images || [], 'result-layout-images', 'result-layout-area');
 
       this.toast('识别完成!', 'success');
     } catch (error) {
@@ -461,15 +549,105 @@ const App = {
 
   async saveQuestion() {
     if (this.currentQuestionId) {
-      this.toast('已保存到错题本', 'success');
-      // 自动切换到错题本页面
       this.switchPage('questions');
+      this.toast('已添加到错题本', 'success');
+    }
+  },
+
+  // 通用下载方法 — 兼容 Tauri WebView2
+  async downloadFile(url, filename) {
+    // 优先通过 Tauri Rust 侧下载（最可靠）
+    if (window.__TAURI__) {
+      try {
+        const endpoint = url.replace(this.serverUrl, '');
+        const savedPath = await window.__TAURI__.core.invoke('download_file', {
+          serverUrl: this.serverUrl,
+          apiKey: this.apiKey,
+          endpoint: endpoint,
+          filename: filename,
+        });
+        this.toast(`已保存到: ${savedPath}`, 'success');
+        return;
+      } catch (e) {
+        console.warn('Rust download failed, trying JS fallback:', e);
+      }
+    }
+
+    // 降级方案: JS fetch + blob + <a download>
+    try {
+      const headers = {};
+      if (this.apiKey) headers['Authorization'] = `Bearer ${this.apiKey}`;
+      const resp = await fetch(url, { headers });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename || '';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+      this.toast('下载已开始', 'success');
+    } catch (err) {
+      this.toast(`下载失败: ${err.message}`, 'error');
     }
   },
 
   downloadMarkdown() {
     if (!this.currentQuestionId) return;
-    window.open(this.api(`/api/v1/reports/${this.currentQuestionId}/markdown`), '_blank');
+    this.downloadFile(
+      this.api(`/api/v1/reports/${this.currentQuestionId}/markdown`),
+      `cuoti_${this.currentQuestionId}.md`
+    );
+  },
+
+  // 下载归档 ZIP（上传结果页）
+  downloadZip() {
+    if (!this.currentQuestionId) return;
+    this.downloadFile(
+      this.api(`/api/v1/reports/${this.currentQuestionId}/download`),
+      `cuoti_question_${this.currentQuestionId}.zip`
+    );
+  },
+
+  // 下载归档 ZIP（详情弹窗）
+  downloadDetailZip() {
+    if (!this.currentQuestionId) return;
+    this.downloadFile(
+      this.api(`/api/v1/reports/${this.currentQuestionId}/download`),
+      `cuoti_question_${this.currentQuestionId}.zip`
+    );
+  },
+
+  // 渲染版面分析图片列表
+  renderLayoutImages(layoutPaths, containerId, areaId) {
+    const container = document.getElementById(containerId);
+    const area = document.getElementById(areaId);
+
+    if (!layoutPaths || layoutPaths.length === 0) {
+      if (area) area.style.display = 'none';
+      return;
+    }
+
+    container.innerHTML = '';
+    layoutPaths.forEach(path => {
+      const url = this.imageUrl(path);
+      const figure = document.createElement('figure');
+      figure.className = 'layout-item';
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = '版面分析';
+      img.loading = 'lazy';
+      const caption = document.createElement('figcaption');
+      caption.textContent = path.split(/[\\/]/).pop();
+      figure.appendChild(img);
+      figure.appendChild(caption);
+      figure.addEventListener('click', () => window.open(url, '_blank', 'noopener,noreferrer'));
+      container.appendChild(figure);
+    });
+
+    if (area) area.style.display = 'block';
   },
 
   // ========================
@@ -510,8 +688,7 @@ const App = {
 
         card.innerHTML = `
           <input type="checkbox" class="question-checkbox" data-id="${q.id}">
-          <img class="question-thumb" src="${this.imageUrl(q.original_image_path)}" alt=""
-               onerror="this.style.display='none'">
+          <img class="question-thumb" src="${this.imageUrl(q.original_image_path)}" alt="">
           <div class="question-info">
             <div class="question-title">${this.escapeHtml(fileName)}</div>
             <div class="question-meta">
@@ -521,6 +698,9 @@ const App = {
             ${tags ? `<div class="question-tags">${tags}</div>` : ''}
           </div>
         `;
+
+        const thumbImg = card.querySelector('.question-thumb');
+        thumbImg.addEventListener('error', function() { this.style.display = 'none'; });
 
         card.addEventListener('click', (e) => {
           if (e.target.type === 'checkbox') return;
@@ -616,6 +796,9 @@ const App = {
       // Markdown content
       document.getElementById('detail-md').innerHTML = this.renderMarkdown(q.ocr_result_md);
 
+      // Layout images
+      this.renderLayoutImages(q.layout_images || [], 'detail-layout-images', 'detail-layout-area');
+
       document.getElementById('detail-modal').style.display = 'flex';
     } catch (error) {
       this.toast(`获取详情失败: ${error.message}`, 'error');
@@ -628,12 +811,18 @@ const App = {
 
   exportDetailMarkdown() {
     if (!this.currentQuestionId) return;
-    window.open(this.api(`/api/v1/reports/${this.currentQuestionId}/markdown`), '_blank');
+    this.downloadFile(
+      this.api(`/api/v1/reports/${this.currentQuestionId}/markdown`),
+      `cuoti_${this.currentQuestionId}.md`
+    );
   },
 
   exportDetailPdf() {
     if (!this.currentQuestionId) return;
-    window.open(this.api(`/api/v1/reports/${this.currentQuestionId}/pdf`), '_blank');
+    this.downloadFile(
+      this.api(`/api/v1/reports/${this.currentQuestionId}/pdf`),
+      `cuoti_${this.currentQuestionId}.pdf`
+    );
   },
 
   async deleteCurrentQuestion() {
@@ -677,7 +866,9 @@ const App = {
       const a = document.createElement('a');
       a.href = url;
       a.download = `cuoti_reports_${this.selectedQuestions.size}questions.zip`;
+      document.body.appendChild(a);
       a.click();
+      a.remove();
       URL.revokeObjectURL(url);
       this.toast(`已导出 ${this.selectedQuestions.size} 道题目`, 'success');
     } catch (error) {
@@ -733,6 +924,7 @@ const App = {
 
   openSettings() {
     document.getElementById('input-server-url').value = this.serverUrl;
+    document.getElementById('input-api-key').value = this.apiKey;
     document.getElementById('settings-modal').style.display = 'flex';
   },
 
@@ -742,11 +934,25 @@ const App = {
 
   applySettings() {
     const url = document.getElementById('input-server-url').value.trim().replace(/\/+$/, '');
+    const apiKey = document.getElementById('input-api-key').value.trim();
     if (url) {
+      // 验证 URL 格式
+      try {
+        const parsed = new URL(url);
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+          this.toast('仅支持 http/https 协议', 'error');
+          return;
+        }
+      } catch {
+        this.toast('无效的 URL 格式', 'error');
+        return;
+      }
       this.serverUrl = url;
+      this.apiKey = apiKey;
       this.saveSettingsData();
+      this.updateServerDisplay();
       this.checkConnection();
-      this.toast('设置已保存', 'success');
+      this.toast('设置已保存，正在连接服务器...', 'info');
     }
     this.closeSettings();
   }

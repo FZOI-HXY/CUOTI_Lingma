@@ -27,8 +27,6 @@ class ReportService:
     def __init__(self):
         self.reports_dir = os.path.join(settings.PROCESSED_DIR, 'reports')
         os.makedirs(self.reports_dir, exist_ok=True)
-        self._img_counter = 0
-        self._tmp_images: List[str] = []
 
     # ─────────────────────────────────────────
     # Markdown 报告
@@ -115,8 +113,8 @@ class ReportService:
         extracted_images = question.get('extracted_images') or []
         ocr_text = question.get('ocr_result_md') or '暂无 OCR 识别结果'
 
-        self._img_counter = 0
-        self._tmp_images = []
+        # Per-call context to avoid thread-unsafe instance state
+        ctx = {'img_counter': 0, 'tmp_images': []}
 
         try:
             # ── Step 1: 构建 HTML ──
@@ -168,7 +166,7 @@ class ReportService:
             html_parts.append('<h2>OCR 识别结果</h2>')
 
             # 先把 LaTeX 公式替换为图片占位，再转 Markdown→HTML
-            ocr_html = self._convert_latex_to_images(ocr_text)
+            ocr_html = self._convert_latex_to_images(ocr_text, ctx)
 
             # markdown 库转换
             ocr_html = md_lib.markdown(ocr_html, extensions=['tables', 'fenced_code'])
@@ -202,7 +200,7 @@ class ReportService:
 
         finally:
             # 清理临时图片
-            for tmp in self._tmp_images:
+            for tmp in ctx['tmp_images']:
                 try:
                     os.remove(tmp)
                 except OSError:
@@ -212,7 +210,7 @@ class ReportService:
     # LaTeX 公式 → PNG 图片（matplotlib 渲染）
     # ─────────────────────────────────────────
 
-    def _render_latex_to_png(self, latex: str, display: bool = False) -> Optional[str]:
+    def _render_latex_to_png(self, latex: str, display: bool = False, ctx: dict = None) -> Optional[str]:
         """
         用 matplotlib 将 LaTeX 公式渲染为 PNG，返回文件路径
         display=True 为块级公式（更大字号），False 为行内公式
@@ -234,31 +232,36 @@ class ReportService:
                     usetex=False)
             ax.axis('off')
 
-            self._img_counter += 1
+            if ctx is None:
+                ctx = {'img_counter': 0, 'tmp_images': []}
+            ctx['img_counter'] += 1
             tmp_path = os.path.join(
                 tempfile.gettempdir(),
-                f'_cuoti_latex_{os.getpid()}_{self._img_counter}.png'
+                f'_cuoti_latex_{os.getpid()}_{ctx["img_counter"]}.png'
             )
             fig.savefig(tmp_path, bbox_inches='tight', dpi=150,
                         transparent=False, facecolor='white', pad_inches=0.05)
             plt.close(fig)
 
-            self._tmp_images.append(tmp_path)
+            ctx['tmp_images'].append(tmp_path)
             return tmp_path
 
         except Exception as e:
             logger.warning(f"LaTeX render failed: {e}")
             return None
 
-    def _convert_latex_to_images(self, text: str) -> str:
+    def _convert_latex_to_images(self, text: str, ctx: dict = None) -> str:
         """
         将文本中的 LaTeX 公式替换为 <img> 标签
         $$...$$ → 块级图片，$...$ → 行内图片
         """
+        if ctx is None:
+            ctx = {'img_counter': 0, 'tmp_images': []}
+
         # 块级公式 $$...$$
         def replace_display(m):
             latex = m.group(1).strip()
-            img_path = self._render_latex_to_png(latex, display=True)
+            img_path = self._render_latex_to_png(latex, display=True, ctx=ctx)
             if img_path:
                 return f'\n<img src="{img_path}" width="500"/>\n'
             return f'<p><code>{latex}</code></p>'
@@ -270,7 +273,7 @@ class ReportService:
             latex = m.group(1).strip()
             if not latex:
                 return ''
-            img_path = self._render_latex_to_png(latex, display=False)
+            img_path = self._render_latex_to_png(latex, display=False, ctx=ctx)
             if img_path:
                 # 用固定高度模拟行内图片
                 return f'<img src="{img_path}" height="20"/>'

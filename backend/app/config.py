@@ -7,19 +7,20 @@ class Settings(BaseSettings):
     """应用配置管理类"""
     
     # 服务器配置
-    HOST: str = "0.0.0.0"
+    HOST: str = "127.0.0.1"
     PORT: int = 8100
-    DEBUG: bool = True
+    DEBUG: bool = False
     
-    # 数据库配置 - SQLite(默认)
+    # 数据库配置
+    DB_BACKEND: str = "sqlite"  # "sqlite" or "mysql"
     DB_FILE: str = "cuoti_system.db"
-    
-    # MySQL配置(如果使用MySQL,取消注释并设置)
-    # DB_HOST: str = "localhost"
-    # DB_PORT: int = 3306
-    # DB_USER: str = "root"
-    # DB_PASSWORD: str = "your_password"
-    # DB_NAME: str = "cuoti_system"
+
+    # MySQL配置(如果使用)
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 3306
+    DB_USER: str = "root"
+    DB_PASSWORD: str = "your_password"
+    DB_NAME: str = "cuoti_system"
     
     # OCR配置
     OCR_LANG: str = "ch"
@@ -30,7 +31,7 @@ class Settings(BaseSettings):
     # ── PaddleOCR-VL-1.6 增强模式配置 ──
     VL_ENABLED: bool = False                       # 是否启用 VL 增强模式
     VL_SERVER_PORT: int = 8101                     # llama-server 监听端口
-    VL_SERVER_HOST: str = "0.0.0.0"                # llama-server 监听地址
+    VL_SERVER_HOST: str = "127.0.0.1"            # llama-server 监听地址
     VL_CTX_SIZE: int = 4096                        # 上下文窗口大小
     VL_THREADS: int = 0                            # 推理线程数 (0=自动)
     VL_STARTUP_TIMEOUT: int = 120                  # llama-server 启动超时(秒)
@@ -57,6 +58,7 @@ class Settings(BaseSettings):
     # 文件存储
     UPLOAD_DIR: str = "./uploads"
     PROCESSED_DIR: str = "./processed"
+    STORAGE_DIR: str = "./storage"   # 归档存储目录（按题目ID组织）
     MAX_FILE_SIZE: int = 10485760  # 10MB
     
     # 日志配置
@@ -66,15 +68,15 @@ class Settings(BaseSettings):
     # CORS配置
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,tauri://localhost,http://tauri.localhost,http://localhost:1420,http://localhost:5173"
     
+    # API认证密钥（留空则不启用认证，用于开发环境）
+    API_KEY: str = ""
+    
     @property
     def database_url(self) -> str:
         """获取数据库连接URL"""
-        # SQLite配置
-        if hasattr(self, 'DB_FILE') and self.DB_FILE:
-            return f"sqlite:///{self.DB_FILE}"
-        
-        # MySQL配置(如果使用)
-        # return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        if self.DB_BACKEND == "mysql":
+            return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        return f"sqlite:///{self.DB_FILE}"
     
     @property
     def cors_origins_list(self) -> List[str]:
