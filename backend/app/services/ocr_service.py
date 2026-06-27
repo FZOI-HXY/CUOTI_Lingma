@@ -50,7 +50,7 @@ class OCRService:
 
                 os.environ.setdefault(
                     'PADDLE_PDX_CACHE_HOME',
-                    r'E:\Program Files\PP_Models',
+                    settings.PADDLE_PDX_CACHE_HOME,
                 )
                 os.environ.setdefault(
                     'PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT',
@@ -98,9 +98,6 @@ class OCRService:
 
         try:
             self.initialize()
-
-            if not os.path.isfile(image_path):
-                raise FileNotFoundError(f"Image not found: {image_path}")
 
             logger.info(f"OCR processing: {image_path}")
 

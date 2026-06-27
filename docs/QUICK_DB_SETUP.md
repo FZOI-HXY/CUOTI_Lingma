@@ -117,7 +117,7 @@ cd backend && python -m app.main   # 后端
 cd frontend && python main.py      # 前端
 ```
 
-访问: http://localhost:8000/docs
+访问: http://localhost:8100/docs
 
 ---
 

@@ -25,3 +25,8 @@ reqwest = { version = "0.12", features = ["json", "multipart"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "io-util", "time", "sync"] }
 dirs = "5"
 url = "2"
+
+[profile.release]
+lto = true
+strip = true
+opt-level = "s"

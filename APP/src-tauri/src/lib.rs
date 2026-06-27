@@ -339,18 +339,22 @@ async fn download_file(
         .unwrap_or_else(|| dirs::home_dir().unwrap_or_default().join("Downloads"));
 
     // 确保目录存在
-    std::fs::create_dir_all(&downloads_dir)
+    tokio::fs::create_dir_all(&downloads_dir)
+        .await
         .map_err(|e| format!("创建目录失败: {}", e))?;
 
     let file_path = downloads_dir.join(&safe_filename);
 
     // M12 fix: 最终验证——确保路径仍在 downloads_dir 内；canonicalize 失败时返回错误
-    let real_downloads = std::fs::canonicalize(&downloads_dir)
+    let real_downloads = tokio::fs::canonicalize(&downloads_dir)
+        .await
         .map_err(|e| format!("无法解析下载目录: {}", e))?;
     let real_target = file_path
         .parent()
-        .and_then(|p| std::fs::canonicalize(p).ok())
-        .ok_or_else(|| "无法解析保存路径".to_string())?;
+        .map(|p| tokio::fs::canonicalize(p))
+        .ok_or_else(|| "无法解析保存路径".to_string())?
+        .await
+        .map_err(|e| format!("无法解析保存路径: {}", e))?;
     if !real_target.starts_with(&real_downloads) {
         return Err("保存路径验证失败".to_string());
     }

@@ -46,7 +46,7 @@
 ```
 
 这会同时启动:
-- 后端API服务 (http://localhost:8000)
+- 后端API服务 (http://localhost:8100)
 - 前端PyQt6界面
 
 ### 选项2: 分别启动
@@ -63,7 +63,7 @@ python main.py
 
 ### 选项3: 测试API
 
-访问 http://localhost:8000/docs 查看交互式API文档
+访问 http://localhost:8100/docs 查看交互式API文档
 
 ---
 
@@ -86,7 +86,7 @@ python main.py
 ```env
 # 服务器
 HOST=0.0.0.0
-PORT=8000
+PORT=8100
 DEBUG=True
 
 # 数据库 - SQLite
@@ -191,7 +191,7 @@ A: 当前使用Mock模式(模拟数据)。要使用真实OCR,需要:
 
 2. **上传测试图片**
    - 使用PyQt6界面上传
-   - 或通过API: http://localhost:8000/docs
+   - 或通过API: http://localhost:8100/docs
 
 3. **查看处理结果**
    - 在"错题管理"标签页查看

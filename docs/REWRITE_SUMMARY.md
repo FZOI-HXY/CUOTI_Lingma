@@ -45,7 +45,7 @@ set "FRONTEND_DIR=%PROJECT_ROOT%\frontend"
 
 ### 3. 智能端口管理
 ```batch
-netstat -ano | findstr ":8000 " | findstr "LISTENING"
+netstat -ano | findstr ":8100 " | findstr "LISTENING"
 ```
 - 自动检测端口占用
 - 提供自动清理选项
@@ -112,7 +112,7 @@ C:\Users\Desktop> F:\CUOTI_Lingma\start.bat
   ⚠️  发现Python进程
 
 [3/4] 端口状态
-  ✅ 端口 8000 空闲
+  ✅ 端口 8100 空闲
 
 [4/4] 后端服务
   ❌ 后端服务无响应 (未启动)
@@ -154,7 +154,7 @@ C:\Users\Desktop> F:\CUOTI_Lingma\start.bat
                ▼
 ┌─────────────────────────────────────┐
 │  [2/5] 检查端口状态                  │
-│  ├─ 检测8000端口                     │
+│  ├─ 检测8100端口                     │
 │  └─ 如被占用,提供清理选项            │
 └──────────────┬──────────────────────┘
                │ 端口可用
@@ -185,7 +185,7 @@ C:\Users\Desktop> F:\CUOTI_Lingma\start.bat
                ▼
 ┌─────────────────────────────────────┐
 │  🎉 系统启动成功!                    │
-│  • API: http://localhost:8000/docs  │
+│  • API: http://localhost:8100/docs  │
 │  • 两个独立窗口显示                  │
 └─────────────────────────────────────┘
 ```
@@ -208,7 +208,7 @@ cd /d "%BACKEND_DIR%"  REM /d 允许切换驱动器
 
 ### 健康检查
 ```batch
-curl -s http://localhost:8000/health
+curl -s http://localhost:8100/health
 ```
 
 ### 进程查找
@@ -218,7 +218,7 @@ tasklist | findstr /i "python.exe"
 
 ### 端口检测
 ```batch
-netstat -ano | findstr ":8000 " | findstr "LISTENING"
+netstat -ano | findstr ":8100 " | findstr "LISTENING"
 ```
 
 ---

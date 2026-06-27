@@ -4,13 +4,13 @@
 
 ### 服务信息
 - **状态**: ✅ 运行中
-- **URL**: http://localhost:8000
+- **URL**: http://localhost:8100
 - **启动时间**: 2026-06-08 19:47:48
 - **进程PID**: 6896, 14580
 
 ### 健康检查
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8100/health
 ```
 
 **响应:**
@@ -88,7 +88,7 @@ INFO: 127.0.0.1:51101 - "GET /app/ HTTP/1.1" 404 Not Found
 
 浏览器访问:
 ```
-http://localhost:8000/docs
+http://localhost:8100/docs
 ```
 
 这是Swagger UI,可以:
@@ -100,14 +100,14 @@ http://localhost:8000/docs
 
 ```bash
 # PowerShell
-Invoke-WebRequest http://localhost:8000/health -UseBasicParsing
+Invoke-WebRequest http://localhost:8100/health -UseBasicParsing
 
 # CMD
-curl http://localhost:8000/health
+curl http://localhost:8100/health
 
 # Python
 import requests
-requests.get('http://localhost:8000/health').json()
+requests.get('http://localhost:8100/health').json()
 ```
 
 ### 3. 启动前端
@@ -151,7 +151,7 @@ taskkill /F /PID 14580
 └──────┬──────┘
        │ HTTP API
 ┌──────▼──────┐
-│ FastAPI后端  │ ← http://localhost:8000
+│ FastAPI后端  │ ← http://localhost:8100
 │             │
 │ • /health   │ ← 健康检查 ✅
 │ • /docs     │ ← API文档
@@ -168,10 +168,10 @@ taskkill /F /PID 14580
 ## 💡 提示
 
 ### 端口占用
-如果端口8000被占用:
+如果端口8100被占用:
 ```bash
 # 查看占用
-netstat -ano | findstr :8000
+netstat -ano | findstr :8100
 
 # 停止进程
 taskkill /F /PID <PID>

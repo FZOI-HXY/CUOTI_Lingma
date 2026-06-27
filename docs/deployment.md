@@ -40,9 +40,9 @@ cd backend
 python -m app.main
 ```
 
-服务将在 `http://localhost:8000` 启动。
+服务将在 `http://localhost:8100` 启动。
 
-访问 `http://localhost:8000/docs` 查看API文档。
+访问 `http://localhost:8100/docs` 查看API文档。
 
 ## 前端部署
 

@@ -51,7 +51,7 @@ python -m app.main
 或使用Uvicorn:
 
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8100
 ```
 
 ## 开发模式
@@ -60,4 +60,4 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 uvicorn app.main:app --reload
 ```
 
-访问 http://localhost:8000/docs 查看交互式API文档。
+访问 http://localhost:8100/docs 查看交互式API文档。

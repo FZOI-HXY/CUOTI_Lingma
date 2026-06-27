@@ -121,7 +121,7 @@ REM Cuoti Management System - Startup Script
 ```bash
 # 使用PowerShell检查状态
 Get-Process python
-netstat -ano | findstr ":8000"
+netstat -ano | findstr ":8100"
 ```
 
 **永久解决:**

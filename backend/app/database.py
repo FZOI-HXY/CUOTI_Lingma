@@ -12,6 +12,8 @@ engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},  # SQLite需要
     pool_pre_ping=True,
+    pool_size=10 if not DATABASE_URL.startswith("sqlite") else None,
+    max_overflow=20 if not DATABASE_URL.startswith("sqlite") else None,
     echo=False
 )
 

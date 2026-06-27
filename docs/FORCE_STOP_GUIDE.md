@@ -58,7 +58,7 @@ Stop-Process -Id 14580 -Force
 
 **验证是否成功:**
 ```powershell
-netstat -ano | findstr ":8000"
+netstat -ano | findstr ":8100"
 ```
 如果没有输出,说明端口已释放。
 
@@ -71,8 +71,8 @@ netstat -ano | findstr ":8000"
 **编辑文件:** `backend\.env`
 
 ```env
-# 将端口从8000改为其他值,如8001
-PORT=8001
+# 将端口从8100改为其他值,如8101
+PORT=8101
 ```
 
 **然后重新启动:**
@@ -81,8 +81,8 @@ PORT=8001
 ```
 
 **访问新地址:**
-- API文档: http://localhost:8001/docs
-- 健康检查: http://localhost:8001/health
+- API文档: http://localhost:8101/docs
+- 健康检查: http://localhost:8101/health
 
 ---
 
@@ -118,8 +118,8 @@ PORT=8001
 ### 3. 定期检查端口
 
 ```bash
-# 检查8000端口是否被占用
-netstat -ano | findstr ":8000"
+# 检查8100端口是否被占用
+netstat -ano | findstr ":8100"
 ```
 
 ---
@@ -157,7 +157,7 @@ netstat -ano | findstr ":8000"
 Get-Process -Id 14580 -ErrorAction SilentlyContinue
 
 # 检查端口是否释放
-netstat -ano | findstr ":8000.*LISTENING"
+netstat -ano | findstr ":8100.*LISTENING"
 ```
 
 如果第一个命令无输出,第二个命令也无输出,说明完全停止了。
@@ -166,11 +166,11 @@ netstat -ano | findstr ":8000.*LISTENING"
 
 ### Q4: 有多个Python进程,哪个是后端?
 
-**A:** 查找监听8000端口的进程:
+**A:** 查找监听8100端口的进程:
 
 ```powershell
-# 找到占用8000端口的PID
-$pid = (netstat -ano | findstr ":8000.*LISTENING").Split()[-1]
+# 找到占用8100端口的PID
+$pid = (netstat -ano | findstr ":8100.*LISTENING").Split()[-1]
 echo "后端进程PID: $pid"
 
 # 查看该进程详情
@@ -194,7 +194,7 @@ Get-Process -Id $pid | Select-Object Id, StartTime, Path
 ## 📞 需要帮助?
 
 如果问题持续存在,请提供以下信息:
-1. `netstat -ano | findstr ":8000"` 的输出
+1. `netstat -ano | findstr ":8100"` 的输出
 2. `Get-Process python` 的输出
 3. 是否使用了虚拟环境
 4. Windows版本

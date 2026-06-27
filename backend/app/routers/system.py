@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import psutil
@@ -120,7 +120,7 @@ async def get_processing_logs(
         
     except Exception as e:
         logger.error(f"Failed to get processing logs: {e}")
-        return {'error': 'Failed to retrieve logs', 'items': []}
+        raise HTTPException(status_code=500, detail="Failed to retrieve logs")
 
 
 @router.get("/stats")
@@ -162,7 +162,7 @@ async def get_statistics(db: Session = Depends(get_db)):
         
     except Exception as e:
         logger.error(f"Failed to get statistics: {e}")
-        return {'error': 'Failed to retrieve statistics'}
+        raise HTTPException(status_code=500, detail="Failed to retrieve statistics")
 
 
 def get_directory_size(path: str) -> int:

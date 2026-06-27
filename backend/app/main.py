@@ -125,7 +125,7 @@ async def api_key_auth_middleware(request, call_next):
     if requires_auth:
         auth_header = request.headers.get("Authorization", "")
         if not auth_header.startswith("Bearer ") or auth_header[7:] != settings.API_KEY:
-            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
     return await call_next(request)
 
@@ -136,7 +136,7 @@ async def app_exception_handler(request, exc: AppException):
     logger.error(f"Application error: {exc.message}")
     return JSONResponse(
         status_code=exc.status_code,
-        content={"error": exc.message, "details": exc.details}
+        content={"detail": exc.message}
     )
 
 
@@ -145,7 +145,7 @@ async def validation_exception_handler(request, exc):
     logger.warning(f"Validation error: {exc.errors()}")
     return JSONResponse(
         status_code=422,
-        content={"error": "Validation failed", "details": exc.errors()}
+        content={"detail": "Validation failed", "errors": exc.errors()}
     )
 
 

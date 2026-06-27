@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks
 from typing import Optional
+import asyncio
 import os
 import time
 
@@ -16,6 +17,12 @@ from ..core.exceptions import AppException, FileUploadError
 from ..schemas import UploadResponse
 
 router = APIRouter()
+
+
+def _write_file(file_path: str, contents: bytes) -> None:
+    """Synchronous file write helper for use with asyncio.to_thread()."""
+    with open(file_path, "wb") as f:
+        f.write(contents)
 
 
 @router.post("/image", response_model=UploadResponse)
@@ -68,13 +75,12 @@ async def upload_image(
         unique_filename = generate_unique_filename(file.filename)
         file_path = os.path.join(settings.UPLOAD_DIR, unique_filename)
         
-        # 保存文件
-        os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-        with open(file_path, "wb") as f:
-            f.write(contents)
-        
-        # 计算文件哈希
-        file_hash = calculate_file_hash(file_path)
+        # 保存文件（使用 asyncio.to_thread 避免阻塞事件循环）
+        await asyncio.to_thread(os.makedirs, settings.UPLOAD_DIR, exist_ok=True)
+        await asyncio.to_thread(_write_file, file_path, contents)
+
+        # 计算文件哈希（使用 asyncio.to_thread 避免阻塞事件循环）
+        file_hash = await asyncio.to_thread(calculate_file_hash, file_path)
         
         duration_ms = (time.time() - start_time) * 1000
         
@@ -148,9 +154,8 @@ async def upload_batch_images(
                 unique_filename = generate_unique_filename(file.filename)
                 file_path = os.path.join(settings.UPLOAD_DIR, unique_filename)
 
-                os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-                with open(file_path, "wb") as f:
-                    f.write(contents)
+                await asyncio.to_thread(os.makedirs, settings.UPLOAD_DIR, exist_ok=True)
+                await asyncio.to_thread(_write_file, file_path, contents)
 
                 results.append({
                     "file_id": unique_filename,

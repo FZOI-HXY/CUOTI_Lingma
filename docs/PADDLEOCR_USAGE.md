@@ -81,7 +81,7 @@ python -m app.main
 ```python
 import requests
 
-url = "http://localhost:8001/upload/image"
+url = "http://localhost:8101/upload/image"
 files = {'file': open('test.jpg', 'rb')}
 response = requests.post(url, files=files)
 file_id = response.json()['file_id']
@@ -90,7 +90,7 @@ file_id = response.json()['file_id']
 **2. 启动 OCR 处理**
 
 ```python
-url = "http://localhost:8001/ocr/process"
+url = "http://localhost:8101/ocr/process"
 data = {
     'file_id': file_id,
     'user_id': 1
@@ -102,7 +102,7 @@ task_id = response.json()['task_id']
 **3. 查询任务状态**
 
 ```python
-url = f"http://localhost:8001/ocr/status/{task_id}"
+url = f"http://localhost:8101/ocr/status/{task_id}"
 response = requests.get(url)
 status = response.json()
 print(f"进度: {status['progress']}%")

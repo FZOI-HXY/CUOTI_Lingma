@@ -5,7 +5,7 @@
 ### 错误信息
 ```
 Upload failed: 422 Client Error: Unprocessable Entity 
-for url: http://localhost:8001/api/v1/upload/image
+for url: http://localhost:8101/api/v1/upload/image
 ```
 
 ### 后端日志
@@ -203,7 +203,7 @@ except requests.exceptions.HTTPError as e:
 
 ##  相关文档
 
-- [PORT_CHANGE.md](PORT_CHANGE.md) - 端口变更说明(8000→8001)
+- [PORT_CHANGE.md](PORT_CHANGE.md) - 端口变更说明(8100→8101)
 - [FRONTEND_IMPORT_FIX.md](FRONTEND_IMPORT_FIX.md) - 前端导入错误修复
 - [ENCODING_FIX.md](ENCODING_FIX.md) - 启动脚本编码问题
 

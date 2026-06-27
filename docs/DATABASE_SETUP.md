@@ -104,7 +104,7 @@ copy .env.example .env
 ```env
 # 服务器配置
 HOST=0.0.0.0
-PORT=8000
+PORT=8100
 DEBUG=True
 
 # 数据库配置
@@ -312,7 +312,7 @@ cd f:\CUOTI_Lingma
    ```
 
 2. **访问API文档**
-   - http://localhost:8000/docs
+   - http://localhost:8100/docs
 
 3. **启动前端应用**
    ```bash

@@ -78,3 +78,20 @@ APP/src-tauri/target/
 # PyQt6
 *.ui
 *.qrc
+
+# Archives and executables
+*.zip
+*.exe
+
+# OCR / layout images (generated at runtime)
+*.jpeg
+*.png
+# Keep Tauri app icons (needed for build)
+!APP/src-tauri/icons/*.png
+
+# Exported files (backend batch exports)
+backend/storage/exports/
+
+# QoderWork session files
+*.session-context.*
+.qoder/

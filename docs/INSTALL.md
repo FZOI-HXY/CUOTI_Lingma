@@ -111,7 +111,7 @@ python scripts/init_db.py
 ## 🔍 验证安装
 
 ### 检查后端
-访问: http://localhost:8000/docs
+访问: http://localhost:8100/docs
 应该能看到API文档页面
 
 ### 检查前端

@@ -86,7 +86,7 @@ CUOTI_Lingma/
 
 ## API文档
 
-启动后端后访问: `http://localhost:8000/docs`
+启动后端后访问: `http://localhost:8100/docs`
 
 ## 配置说明
 

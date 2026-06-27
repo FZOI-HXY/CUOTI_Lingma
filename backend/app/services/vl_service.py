@@ -192,9 +192,6 @@ class VLService:
                 "Please check llama-server is running."
             )
 
-        if not os.path.isfile(image_path):
-            raise FileNotFoundError(f"Image not found: {image_path}")
-
         logger.info(f"VL processing: {image_path}")
 
         try:
@@ -203,6 +200,8 @@ class VLService:
         except ImportError:
             logger.warning("PaddleOCRVL not available, falling back to direct API")
             result = self._process_via_direct_api(image_path)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Image not found: {image_path}")
 
         processing_time_ms = (time.time() - start_time) * 1000
 

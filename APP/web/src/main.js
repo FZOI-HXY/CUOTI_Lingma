@@ -44,7 +44,7 @@ const App = {
     if (this.apiKey) {
       headers['Authorization'] = `Bearer ${this.apiKey}`;
     }
-    const resp = await fetch(url, { ...options, headers });
+    const resp = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(30000) });
     if (!resp.ok) {
       const body = await resp.json().catch(() => ({}));
       throw new Error(body.error || body.detail || `HTTP ${resp.status}`);
@@ -126,8 +126,7 @@ const App = {
     html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
     // Horizontal rules
     html = html.replace(/^---$/gm, '<hr>');
-    // Line breaks
-    html = html.replace(/\n/g, '<br>');
+    // Line breaks handled by CSS white-space: pre-wrap
     return html;
   },
 
@@ -469,7 +468,9 @@ const App = {
     const progressFill = document.getElementById('progress-fill');
     const processingText = document.getElementById('processing-text');
     let pollCount = 0;
+    let transientErrors = 0;
     const maxPolls = 150; // 最多轮询 150 次 (2秒 × 150 = 5 分钟)
+    const maxTransientErrors = 3;
 
     this.pollingTimer = setInterval(async () => {
       pollCount++;
@@ -484,6 +485,7 @@ const App = {
       try {
         const resp = await this.fetchApi(`/api/v1/ocr/status/${this.currentTaskId}`);
         const data = await resp.json();
+        transientErrors = 0; // Reset on success
 
         if (data.status === 'completed') {
           clearInterval(this.pollingTimer);
@@ -508,10 +510,16 @@ const App = {
           processingText.textContent = `正在识别中... ${progress >= 0 ? progress + '%' : ''}`;
         }
       } catch (error) {
-        clearInterval(this.pollingTimer);
-        this.pollingTimer = null;
-        this.toast(`查询状态失败: ${error.message}`, 'error');
-        this.resetUpload();
+        transientErrors++;
+        const isServerError = error.message && error.message.startsWith('HTTP');
+        if (isServerError || transientErrors >= maxTransientErrors) {
+          clearInterval(this.pollingTimer);
+          this.pollingTimer = null;
+          this.toast(`查询状态失败: ${error.message}`, 'error');
+          this.resetUpload();
+        } else {
+          console.warn(`[pollTaskStatus] 网络错误 (${transientErrors}/${maxTransientErrors}): ${error.message}`);
+        }
       }
     }, 2000);
   },

@@ -85,7 +85,7 @@ start.bat start
 ============================================================
 
 ✅ 后端服务已启动
-📍 API文档: http://localhost:8000/docs
+📍 API文档: http://localhost:8100/docs
 
 ⏳ 等待后端服务就绪...
 ✅ 后端服务就绪!
@@ -143,15 +143,15 @@ start.bat status
 📊 服务状态
 ============================================================
 
-✅ 后端服务: 运行中 (端口 8000 已监听)
+✅ 后端服务: 运行中 (端口 8100 已监听)
 
 运行中的Python进程:
   python.exe    12345  Console  1  150 MB
   python.exe    12346  Console  1  120 MB
 
 📝 访问地址:
-  - API文档: http://localhost:8000/docs
-  - 健康检查: http://localhost:8000/health
+  - API文档: http://localhost:8100/docs
+  - 健康检查: http://localhost:8100/health
 ```
 
 ---
@@ -193,7 +193,7 @@ python manage.py frontend
 编辑 `backend/.env` 文件修改配置:
 ```env
 HOST=0.0.0.0
-PORT=8000
+PORT=8100
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
@@ -202,7 +202,7 @@ DB_NAME=cuoti_system
 ```
 
 ### 4. 端口被占用
-如果端口8000被占用,修改 `.env` 中的 `PORT` 配置。
+如果端口8100被占用,修改 `.env` 中的 `PORT` 配置。
 
 ---
 
@@ -224,7 +224,7 @@ py -3.12 -m venv venv312
 **检查:**
 1. 数据库是否运行
 2. `.env` 配置是否正确
-3. 端口8000是否被占用
+3. 端口8100是否被占用
 
 **查看日志:**
 ```bash
@@ -257,7 +257,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 start.bat
 
 # 工作中...
-# 访问 http://localhost:8000/docs 测试API
+# 访问 http://localhost:8100/docs 测试API
 # 使用PyQt6界面操作
 
 # 晚上停止

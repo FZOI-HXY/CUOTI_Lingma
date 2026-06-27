@@ -166,7 +166,7 @@ cd f:\CUOTI_Lingma
 **预期结果:**
 - ✅ 无导入错误
 - ✅ PyQt6窗口正常显示
-- ✅ 可以连接到后端API (http://localhost:8001)
+- ✅ 可以连接到后端API (http://localhost:8101)
 
 ### 清理缓存(如果需要)
 ```powershell
@@ -209,7 +209,7 @@ frontend/
 
 ## 🔗 相关文档
 
-- [PORT_CHANGE.md](PORT_CHANGE.md) - 端口变更说明(8000→8001)
+- [PORT_CHANGE.md](PORT_CHANGE.md) - 端口变更说明(8100→8101)
 - [ENCODING_FIX.md](ENCODING_FIX.md) - 启动脚本编码问题
 - [FORCE_STOP_GUIDE.md](FORCE_STOP_GUIDE.md) - 强制停止服务指南
 
@@ -228,4 +228,4 @@ frontend/
 .\venv312\Scripts\python.exe frontend\main.py
 ```
 
-前端会自动连接到后端API (http://localhost:8001)。
+前端会自动连接到后端API (http://localhost:8101)。

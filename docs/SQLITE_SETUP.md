@@ -236,7 +236,7 @@ A:
    ```
 
 3. **访问API文档**
-   - http://localhost:8000/docs
+   - http://localhost:8100/docs
 
 4. **开始使用!**
 
